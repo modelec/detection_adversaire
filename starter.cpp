@@ -44,7 +44,7 @@ int main(int argc, const char * argv[]) {
                 break;
             }
         }
-        drv->stop()
+        drv->stop();
         drv->setMotorSpeed(0);
         drv->disconnect();
     }
