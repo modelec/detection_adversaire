@@ -10,62 +10,15 @@
 #define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
 #endif
 
-#define X_LIDAR 1.f
-#define Y_LIDAR 1.f
-#define ALPHA_LIDAR 0.f
+#define X_ROBOT 1000.f
+#define Y_ROBOT 1000.f
+#define ALPHA_ROBOT 0.f
+#define MAX_X 3000.f
+#define MAX_Y 2000.f
 
 bool stop_signal_received;
 void stop_loop(int) {
     stop_signal_received = true;
-}
-
-double edge_distance(double x, double y, double alpha) {
-    if (M_PI / 2.f > alpha && alpha >= 0.f) {
-        double border_right_x_distance = 3.f - x;
-        double border_right_y_distance = x * sin(alpha) / cos(alpha);
-        double border_top_x_distance = (2.f - y) * cos(alpha) / sin(alpha);
-        double border_top_y_distance = 2.f - y;
-        double distance_top = sqrt(pow(border_top_x_distance, 2) + pow(border_top_y_distance, 2));
-        double distance_right = sqrt(pow(border_right_x_distance, 2) + pow(border_right_y_distance, 2));
-        return std::min(distance_top, distance_right);
-    } else if (M_PI > alpha && alpha >= M_PI / 2.f) {
-        double border_top_x_distance = (2.f - y) * cos(alpha) / sin(alpha);
-        double border_top_y_distance = 2.f - y;
-        double border_left_x_distance = x;
-        double border_left_y_distance = (3.f - x) * sin(alpha) / cos(alpha);
-        double distance_top = sqrt(pow(border_top_x_distance, 2) + pow(border_top_y_distance, 2));
-        double distance_left = sqrt(pow(border_left_x_distance, 2) + pow(border_left_y_distance, 2));
-        return std::min(distance_top, distance_left);
-    } else if (M_PI * 3.f / 2.f > alpha && alpha >= M_PI) {
-        double border_left_x_distance = x;
-        double border_left_y_distance = (3.f - x) * sin(alpha) / cos(alpha);
-        double border_bottom_x_distance = y * cos(alpha) / sin(alpha);
-        double border_bottom_y_distance = y;
-        double distance_left = sqrt(pow(border_left_x_distance, 2) + pow(border_left_y_distance, 2));
-        double distance_bottom = sqrt(pow(border_bottom_x_distance, 2) + pow(border_bottom_y_distance, 2));
-        return std::min(distance_left, distance_bottom);
-    } else if (2.f * M_PI > alpha && alpha >= M_PI * 3.f / 2.f) {
-        double border_bottom_x_distance = y * cos(alpha) / sin(alpha);
-        double border_bottom_y_distance = y;
-        double border_right_x_distance = 3.f - x;
-        double border_right_y_distance = x * sin(alpha) / cos(alpha);
-        double distance_bottom = sqrt(pow(border_bottom_x_distance, 2) + pow(border_bottom_y_distance, 2));
-        double distance_right = sqrt(pow(border_right_x_distance, 2) + pow(border_right_y_distance, 2));
-        return std::min(distance_bottom, distance_right);
-    }
-    return 100.f;
-}
-
-bool is_inside(double x_lidar, double y_lidar, double alpha_lidar, double distance, double angle){
-    double alpha = angle / 360.f * 2.f * M_PI + alpha_lidar;
-    if(alpha >= (2 * M_PI)){
-        alpha = alpha - 2.f * M_PI;
-    }
-    else if(alpha < 0){
-        alpha = alpha + 2.f * M_PI;
-    }
-    double wall_distance = edge_distance(x_lidar, y_lidar, alpha);
-    return (distance < wall_distance);
 }
 
 using namespace sl;
@@ -85,15 +38,20 @@ int main(int argc, const char * argv[]) {
             if (SL_IS_OK(op_result)) {
                 drv->ascendScanData(nodes, count);
                 for (int pos = 0; pos < (int)count ; ++pos) {
-		    if(nodes[pos].dist_mm_q2/4.0f !=0 && nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
-                    	if(is_inside(X_LIDAR, Y_LIDAR, ALPHA_LIDAR, nodes[pos].dist_mm_q2/4000.0f, ((nodes[pos].angle_z_q14 * 90.f) / 16384.f))){
-                            printf("Detected inside echo at angle: %03.2f Dist: %08.0fmm\n",
-                                (nodes[pos].angle_z_q14 * 90.f) / 16384.f,
-                                nodes[pos].dist_mm_q2/4.0f
-			    );
-                    	}
-		    }
-                }
+		    double alpha_lidar = 2.f * M_PI - nodes[pos].angle_z_q14 * 0.5f * M_PI / 16384.f;
+                    double alpha = ALPHA_ROBOT + alpha_lidar;
+                    if(alpha > 2.f * M_PI){
+                        alpha = alpha - 2.f * M_PI;
+                    }
+                    else if(alpha < 0){
+                        alpha = alpha + 2.f * M_PI;
+                    }
+                    double x_detected = X_ROBOT + nodes[pos].dist_mm_q2/4.0f * cos(alpha);
+                    double y_detected = Y_ROBOT + nodes[pos].dist_mm_q2/4.0f * sin(alpha);
+                    if(x_detected < MAX_X && x_detected > 0.f && y_detected < MAX_Y && y_detected > 0.f && nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
+                        printf("Detected inside : x : %04.2f y : %04.2f\n", x_detected, y_detected);
+                    }
+		}
             }
             if (stop_signal_received){
                 break;
