@@ -15,6 +15,7 @@
 #define MAX_Y 2000.f
 
 bool stop_signal_received;
+
 void stop_loop(int) {
     stop_signal_received = true;
 }
@@ -36,16 +37,16 @@ int main() {
             if (SL_IS_OK(op_result)) {
                 drv->ascendScanData(nodes, count);
                 list<pair<double, double>> points_inside;
-                for (int pos = 0; pos < (int)count; ++pos) {
-                    double alpha_lidar = 2.f * M_PI - (double)nodes[pos].angle_z_q14 * 0.5f * M_PI / 16384.f;
+                for (int pos = 0; pos < (int) count; ++pos) {
+                    double alpha_lidar = 2.f * M_PI - (double) nodes[pos].angle_z_q14 * 0.5f * M_PI / 16384.f;
                     double alpha = ALPHA_ROBOT + alpha_lidar;
                     if (alpha > 2.f * M_PI) {
                         alpha = alpha - 2.f * M_PI;
                     } else if (alpha < 0) {
                         alpha = alpha + 2.f * M_PI;
                     }
-                    double x_detected = X_ROBOT + (double)nodes[pos].dist_mm_q2 / 4.0f * cos(alpha);
-                    double y_detected = Y_ROBOT + (double)nodes[pos].dist_mm_q2 / 4.0f * sin(alpha);
+                    double x_detected = X_ROBOT + (double) nodes[pos].dist_mm_q2 / 4.0f * cos(alpha);
+                    double y_detected = Y_ROBOT + (double) nodes[pos].dist_mm_q2 / 4.0f * sin(alpha);
                     if (x_detected < MAX_X && x_detected > 0.f && y_detected < MAX_Y && y_detected > 0.f && nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0) {
                         pair<int, int> position_detected;
                         position_detected = make_pair(x_detected, y_detected);
@@ -53,32 +54,64 @@ int main() {
                     }
                 }
                 auto it = points_inside.begin();
-                while (it != points_inside.end()){
+                while (it != points_inside.end()) {
                     double distance_from_prev;
                     double distance_to_next;
-                    if(it == points_inside.begin()){
-                        distance_from_prev = sqrt(pow((*prev(points_inside.end())).first - (*it).first, 2) + pow((*prev(points_inside.end())).second - (*it).second, 2));
-                        distance_to_next = sqrt(pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
-                    } else if(it == prev(points_inside.end())) {
-                        distance_from_prev = sqrt(pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
-                        distance_to_next = sqrt(pow((*points_inside.begin()).first - (*it).first, 2) + pow((*points_inside.begin()).second - (*it).second, 2));
+                    if (it == points_inside.begin()) {
+                        distance_from_prev = sqrt(pow((*prev(points_inside.end())).first - (*it).first, 2) +
+                                                  pow((*prev(points_inside.end())).second - (*it).second, 2));
+                        distance_to_next = sqrt(
+                                pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
+                    } else if (it == prev(points_inside.end())) {
+                        distance_from_prev = sqrt(
+                                pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
+                        distance_to_next = sqrt(pow((*points_inside.begin()).first - (*it).first, 2) +
+                                                pow((*points_inside.begin()).second - (*it).second, 2));
                     } else {
-                        distance_from_prev = sqrt(pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
-                        distance_to_next = sqrt(pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
+                        distance_from_prev = sqrt(
+                                pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
+                        distance_to_next = sqrt(
+                                pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
                     }
-                    if (distance_from_prev > 100.f && distance_to_next > 100.f){
+                    if (distance_from_prev > 100.f && distance_to_next > 100.f) {
                         cout << "False detection : x : " << (*it).first << " y : " << (*it).second << endl;
                         points_inside.erase(it++);
                     } else {
-			it++;
-		    }
+                        it++;
+                    }
                 }
                 cout << "Detected " << points_inside.size() << " correct points this round" << endl;
-                it = points_inside.begin();
-                while (it != points_inside.end()){
-                    cout << "Correct detection : x : " << (*it).first << " y : " << (*it).second << endl;
-                    it++;
-		}
+                list<pair<double, double>> mediators;
+                for(it = points_inside.begin(); it != prev(points_inside.end()); it++){
+                    double x_middle = ((*it).first + (*next(it)).first) / 2.f;
+                    double y_middle = ((*it).second + (*next(it)).second) / 2.f;
+                    double a = (((*it).first - (*next(it)).first)) / ((*next(it)).second) - ((*it).second);
+                    double b = y_middle - a * x_middle;
+                    pair<int, int> mediator_equation;
+                    mediator_equation = make_pair(a, b);
+                    mediators.emplace_back(mediator_equation);
+                }
+                list<pair<double, double>> intersections;
+                for(auto i = mediators.begin(); i != prev(mediators.end()); i++){
+                    for(auto j = next(i); j != i; j++){
+                        if(j == mediators.end()){
+                            j = mediators.begin();
+                        }
+                        pair<double, double> intersection;
+                        double x_intersect = ((*i).second - (*j).second)/((*j).first - (*i).first);
+                        intersection = make_pair(x_intersect, (*i).first * x_intersect + (*i).second);
+                        intersections.emplace_back(intersection);
+                    }
+                }
+                double total_x;
+                double total_y;
+                int n;
+                for(auto i = intersections.begin(); it != intersections.end(); it++){
+                    n++;
+                    total_x += (*it).first;
+                    total_y += (*it).second;
+                }
+                cout << "Detected ennemy position : x : " << total_x/n << " y : " << total_y/n << endl;
             }
             if (stop_signal_received) {
                 break;
