@@ -66,16 +66,19 @@ int main() {
                         distance_from_prev = sqrt(pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
                         distance_to_next = sqrt(pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
                     }
-                    if (distance_from_prev > 0.1 && distance_to_next > 0.1){
+                    if (distance_from_prev > 100.f && distance_to_next > 100.f){
                         cout << "False detection : x : " << (*it).first << " y : " << (*it).second << endl;
                         points_inside.erase(it++);
-                    }
+                    } else {
+			it++;
+		    }
                 }
                 cout << "Detected " << points_inside.size() << " correct points this round" << endl;
                 it = points_inside.begin();
                 while (it != points_inside.end()){
                     cout << "Correct detection : x : " << (*it).first << " y : " << (*it).second << endl;
-                }
+                    it++;
+		}
             }
             if (stop_signal_received) {
                 break;
