@@ -58,20 +58,14 @@ int main() {
                     double distance_from_prev;
                     double distance_to_next;
                     if (it == points_inside.begin()) {
-                        distance_from_prev = sqrt(pow((*prev(points_inside.end())).first - (*it).first, 2) +
-                                                  pow((*prev(points_inside.end())).second - (*it).second, 2));
-                        distance_to_next = sqrt(
-                                pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
+                        distance_from_prev = sqrt(pow((*prev(points_inside.end())).first - (*it).first, 2) + pow((*prev(points_inside.end())).second - (*it).second, 2));
+                        distance_to_next = sqrt(pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
                     } else if (it == prev(points_inside.end())) {
-                        distance_from_prev = sqrt(
-                                pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
-                        distance_to_next = sqrt(pow((*points_inside.begin()).first - (*it).first, 2) +
-                                                pow((*points_inside.begin()).second - (*it).second, 2));
+                        distance_from_prev = sqrt(pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
+                        distance_to_next = sqrt(pow((*points_inside.begin()).first - (*it).first, 2) + pow((*points_inside.begin()).second - (*it).second, 2));
                     } else {
-                        distance_from_prev = sqrt(
-                                pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
-                        distance_to_next = sqrt(
-                                pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
+                        distance_from_prev = sqrt(pow((*prev(it)).first - (*it).first, 2) + pow((*prev(it)).second - (*it).second, 2));
+                        distance_to_next = sqrt(pow((*next(it)).first - (*it).first, 2) + pow((*next(it)).second - (*it).second, 2));
                     }
                     if (distance_from_prev > 100.f && distance_to_next > 100.f) {
                         cout << "False detection : x : " << (*it).first << " y : " << (*it).second << endl;
@@ -82,42 +76,42 @@ int main() {
                 }
                 cout << "Detected " << points_inside.size() << " correct points this round" << endl;
                 list<pair<double, double>> mediators;
-                for(it = points_inside.begin(); it != prev(points_inside.end()); it++){
+                for (it = points_inside.begin(); it != prev(points_inside.end()); it++) {
                     double x_middle = ((*it).first + (*next(it)).first) / 2.f;
                     double y_middle = ((*it).second + (*next(it)).second) / 2.f;
-                    double a = (((*it).first - (*next(it)).first)) / ((*next(it)).second) - ((*it).second);
+                    double a = (((*it).first - (*next(it)).first)) / (((*next(it)).second) - ((*it).second));
                     double b = y_middle - a * x_middle;
                     pair<int, int> mediator_equation;
                     mediator_equation = make_pair(a, b);
                     mediators.emplace_back(mediator_equation);
-		    cout << "Point iterator : " << distance(points_inside.begin(), it) << " Mediator between x " << (*it).first << " y " << (*it).second << " and x " << (*next(it)).first << " y " << (*next(it)).second << " :  a = " << a << " b = " << b << endl;
+                    cout << "Point iterator : " << distance(points_inside.begin(), it) << " Mediator between x " << (*it).first << " y " << (*it).second << " and x " << (*next(it)).first << " y " << (*next(it)).second << " :  a = " << a << " b = " << b << endl;
                 }
                 list<pair<double, double>> intersections;
-                for(auto i = mediators.begin(); i != prev(mediators.end()); i++){
-                    for(auto j = next(i); j != i; j++){
-                        if(j == mediators.end()){
-                            if(i == mediators.begin()){
+                for (auto i = mediators.begin(); i != prev(mediators.end()); i++) {
+                    for (auto j = next(i); j != i; j++) {
+                        if (j == mediators.end()) {
+                            if (i == mediators.begin()) {
                                 break;
                             }
                             j = mediators.begin();
                         }
                         pair<double, double> intersection;
-                        double x_intersect = ((*i).second - (*j).second)/((*j).first - (*i).first);
+                        double x_intersect = ((*i).second - (*j).second) / ((*j).first - (*i).first);
                         intersection = make_pair(x_intersect, (*i).second - (*i).first * x_intersect);
                         intersections.emplace_back(intersection);
-			cout << "Mediator iterator : " << distance(mediators.begin(), i) << "," << distance(mediators.begin(), j)  << " Intersection between mediator a = " << (*i).first << " b = " << (*i).second << " and a = " << (*j).first << " b = " << (*j).second << " at coordinates x " << x_intersect << " y " << (*i).second - (*i).first * x_intersect << endl; 
+                        cout << "Mediator iterator : " << distance(mediators.begin(), i) << "," << distance(mediators.begin(), j) << " Intersection between mediator a = " << (*i).first << " b = " << (*i).second << " and a = " << (*j).first << " b = " << (*j).second << " at coordinates x " << x_intersect << " y " << (*i).second - (*i).first * x_intersect << endl;
                     }
                 }
-                double total_x;
-                double total_y;
+                double total_x = 0;
+                double total_y = 0;
                 unsigned int n = 0;
-                for(auto it = intersections.begin(); it != intersections.end(); it++){
+                for (auto iter = intersections.begin(); it != intersections.end(); it++) {
                     n++;
-                    total_x += (*it).first;
-                    total_y += (*it).second;
-			cout << "N : " << n << " Intersection x " << (*it).first << " y " << (*it).second << endl;
+                    total_x += (*iter).first;
+                    total_y += (*iter).second;
+                    cout << "N : " << n << " Intersection x " << (*iter).first << " y " << (*iter).second << endl;
                 }
-                cout << "Detected ennemy position : x : " << total_x/(double)n << " y : " << total_y/(double)n << " from " << n << " points" <<  endl;
+                cout << "Detected enemy position : x : " << total_x / (double) n << " y : " << total_y / (double) n << " from " << n << " points" << endl;
             }
             if (stop_signal_received) {
                 break;
