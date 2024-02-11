@@ -88,13 +88,7 @@ int main() {
                 }
                 list<pair<double, double>> intersections;
                 for (auto i = mediators.begin(); i != prev(mediators.end()); i++) {
-                    for (auto j = next(i); j != i; j++) {
-                        if (j == mediators.end()) {
-                            if (i == mediators.begin()) {
-                                break;
-                            }
-                            j = mediators.begin();
-                        }
+                    for (auto j = next(i); j != mediators.end(); j++) {
                         pair<double, double> intersection;
                         double x_intersect = ((*i).second - (*j).second) / ((*j).first - (*i).first);
                         intersection = make_pair(x_intersect, (*i).second - (*i).first * x_intersect);
@@ -105,7 +99,7 @@ int main() {
                 double total_x = 0;
                 double total_y = 0;
                 unsigned int n = 0;
-                for (auto iter = intersections.begin(); it != intersections.end(); it++) {
+                for (auto iter = intersections.begin(); iter != intersections.end(); iter++) {
                     n++;
                     total_x += (*iter).first;
                     total_y += (*iter).second;
