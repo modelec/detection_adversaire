@@ -90,28 +90,34 @@ int main() {
                     pair<int, int> mediator_equation;
                     mediator_equation = make_pair(a, b);
                     mediators.emplace_back(mediator_equation);
+		    cout << "Point iterator : " << distance(points_inside.begin(), it) << " Mediator between x " << (*it).first << " y " << (*it).second << " and x " << (*next(it)).first << " y " << (*next(it)).second << " :  a = " << a << " b = " << b << endl;
                 }
                 list<pair<double, double>> intersections;
                 for(auto i = mediators.begin(); i != prev(mediators.end()); i++){
                     for(auto j = next(i); j != i; j++){
                         if(j == mediators.end()){
+                            if(i == mediators.begin()){
+                                break;
+                            }
                             j = mediators.begin();
                         }
                         pair<double, double> intersection;
                         double x_intersect = ((*i).second - (*j).second)/((*j).first - (*i).first);
-                        intersection = make_pair(x_intersect, (*i).first * x_intersect + (*i).second);
+                        intersection = make_pair(x_intersect, (*i).second - (*i).first * x_intersect);
                         intersections.emplace_back(intersection);
+			cout << "Mediator iterator : " << distance(mediators.begin(), i) << "," << distance(mediators.begin(), j)  << " Intersection between mediator a = " << (*i).first << " b = " << (*i).second << " and a = " << (*j).first << " b = " << (*j).second << " at coordinates x " << x_intersect << " y " << (*i).second - (*i).first * x_intersect << endl; 
                     }
                 }
                 double total_x;
                 double total_y;
-                int n;
-                for(auto i = intersections.begin(); it != intersections.end(); it++){
+                unsigned int n = 0;
+                for(auto it = intersections.begin(); it != intersections.end(); it++){
                     n++;
                     total_x += (*it).first;
                     total_y += (*it).second;
+			cout << "N : " << n << " Intersection x " << (*it).first << " y " << (*it).second << endl;
                 }
-                cout << "Detected ennemy position : x : " << total_x/n << " y : " << total_y/n << endl;
+                cout << "Detected ennemy position : x : " << total_x/(double)n << " y : " << total_y/(double)n << " from " << n << " points" <<  endl;
             }
             if (stop_signal_received) {
                 break;
