@@ -75,7 +75,6 @@ int main() {
                         cout << "False detection : x : " << (*it).first << " y : " << (*it).second << endl;
                         points_inside.erase(it++);
                     } else {
-                        it++;
                         if(min_x > (*it).first || min_x == 0){
                             min_x = (*it).first;
                         }
@@ -88,9 +87,10 @@ int main() {
                         if(max_y < (*it).second || max_y == 0){
                             max_y = (*it).second;
                         }
+			it++;
                     }
                 }
-                cout << "Detected " << points_inside.size() << " correct points this round" << endl;
+                cout << "Detected " << points_inside.size() << " correct points this round max_x " << max_x << " max_y " << max_y << " min_x  " << min_x << " min_y " << min_y << endl;
                 list<pair<double, double>> mediators;
                 for (it = points_inside.begin(); it != prev(points_inside.end()); it++) {
                     double x_middle = ((*it).first + (*next(it)).first) / 2.f;
