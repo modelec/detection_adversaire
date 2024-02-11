@@ -3,6 +3,7 @@
 #include <cmath>
 #include <rplidar.h>
 #include <list>
+#include <chrono>
 
 #ifndef get_size
 #define get_size(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
@@ -112,12 +113,9 @@ int main() {
                         pair<int, int> mediator_equation;
                         mediator_equation = make_pair(a, b);
                         mediators.emplace_back(mediator_equation);
-                        cout << "Point iterator : " << distance(points_inside.begin(), i) << ","
-                             << distance(points_inside.begin(), j) << " Mediator between x "
-                             << (*i).first << " y " << (*i).second << " and x " << (*j).first << " y "
-                             << (*j).second << " :  a = " << a << " b = " << b << endl;
                     }
                 }
+		cout << "Determined " << mediators.size() << " mediators" << endl;
                 /* GETTING MEDIATORS INTERSECTIONS COORDINATES */
                 list<pair<double, double>> intersections;
                 for (auto i = mediators.begin(); i != prev(mediators.end()); i++) {
@@ -126,13 +124,9 @@ int main() {
                         double x_intersect = ((*i).second - (*j).second) / ((*j).first - (*i).first);
                         intersection = make_pair(x_intersect, (*i).second - (*i).first * x_intersect);
                         intersections.emplace_back(intersection);
-                        cout << "Mediator iterator : " << distance(mediators.begin(), i) << ","
-                             << distance(mediators.begin(), j) << " Intersection between mediator a = " << (*i).first
-                             << " b = " << (*i).second << " and a = " << (*j).first << " b = " << (*j).second
-                             << " at coordinates x " << x_intersect << " y " << (*i).second - (*i).first * x_intersect
-                             << endl;
                     }
                 }
+		cout << "Calculated " << intersections.size() << " intersections" << endl;
                 /* ESTIMATING ENEMY POS */
                 double total_x = 0;
                 double total_y = 0;
@@ -143,14 +137,13 @@ int main() {
                         n++;
                         total_x += (*iter).first;
                         total_y += (*iter).second;
-                        cout << "N : " << n << " Intersection x " << (*iter).first << " y " << (*iter).second << endl;
                     }
                 }
                 if (n > 0) {
                     cout << "Detected enemy position : x : " << total_x / (double) n << " y : " << total_y / (double) n
-                         << " from " << n << " points" << endl;
+                         << " from " << n << " points at " << chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now().time_since_epoch()).count()  << "ms since epoch" << endl;
                 } else {
-                    cout << "Could not precisely detect ennemy pos";
+                    cout << "Could not precisely detect enemy pos";
                 }
             }
             if (stop_signal_received) {
