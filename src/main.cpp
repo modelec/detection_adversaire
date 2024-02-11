@@ -54,6 +54,10 @@ int main() {
                     }
                 }
                 auto it = points_inside.begin();
+                double min_x = 0;
+                double max_x = 0;
+                double min_y = 0;
+                double max_y = 0;
                 while (it != points_inside.end()) {
                     double distance_from_prev;
                     double distance_to_next;
@@ -72,6 +76,18 @@ int main() {
                         points_inside.erase(it++);
                     } else {
                         it++;
+                        if(min_x > (*it).first || min_x == 0){
+                            min_x = (*it).first;
+                        }
+                        if(max_x < (*it).first || max_x == 0){
+                            max_x = (*it).first;
+                        }
+                        if(min_y > (*it).second || min_y == 0){
+                            min_y = (*it).second;
+                        }
+                        if(max_y < (*it).second || max_y == 0){
+                            max_y = (*it).second;
+                        }
                     }
                 }
                 cout << "Detected " << points_inside.size() << " correct points this round" << endl;
@@ -100,12 +116,18 @@ int main() {
                 double total_y = 0;
                 unsigned int n = 0;
                 for (auto iter = intersections.begin(); iter != intersections.end(); iter++) {
-                    n++;
-                    total_x += (*iter).first;
-                    total_y += (*iter).second;
-                    cout << "N : " << n << " Intersection x " << (*iter).first << " y " << (*iter).second << endl;
+                    if((*iter).first > min_x && (*iter).first < max_x && (*iter).second > min_y && (*iter).second < max_y){
+                        n++;
+                        total_x += (*iter).first;
+                        total_y += (*iter).second;
+                        cout << "N : " << n << " Intersection x " << (*iter).first << " y " << (*iter).second << endl;
+                    }
                 }
-                cout << "Detected enemy position : x : " << total_x / (double) n << " y : " << total_y / (double) n << " from " << n << " points" << endl;
+                if(n > 0){
+                    cout << "Detected enemy position : x : " << total_x / (double) n << " y : " << total_y / (double) n << " from " << n << " points" << endl;
+                } else {
+                    cout << "Could not precisely detect ennemy pos";
+                }
             }
             if (stop_signal_received) {
                 break;
