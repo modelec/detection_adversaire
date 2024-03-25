@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 SET(CMAKE_CXX_FLAGS -pthread)
 
 include_directories(include)
-add_executable(${PROJECT_NAME} src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/localization.h src/localization.cpp)
 
 set(RPLIDAR_SDK_PATH "/home/modelec/rplidar_sdk")
 
