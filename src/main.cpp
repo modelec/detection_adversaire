@@ -14,26 +14,52 @@ void stop_loop(int) {
 using namespace std;
 
 int main() {
-    Localization localizer;
+    //TCP socket connection
+    Localization localizer("127.0.0.1", 8080);
+    localizer.start();
+    //LIDAR connection
     sl::Result<sl::IChannel *> channel = sl::createSerialPortChannel("/dev/ttyUSB0", 115200);
     sl::ILidarDriver *drv = *sl::createLidarDriver();
     auto res = drv->connect(*channel);
     if (SL_IS_OK(res)) {
-        drv->startScan(false, true);
+        //checking LIDAR health status
         sl_result op_result;
+        sl_lidar_response_device_health_t healthinfo;
+        op_result = drv->getHealth(healthinfo);
+        if (SL_IS_OK(op_result)) {
+            localizer.setLidarHealth(true);
+        }
         signal(SIGINT, stop_loop);
-        while (true) {
-            sl_lidar_response_measurement_node_hq_t nodes[8192];
-            size_t count = get_size(nodes);
-            op_result = drv->grabScanDataHq(nodes, count);
-            if (SL_IS_OK(op_result)) {
-                drv->ascendScanData(nodes, count);
-                localizer.processPoints(nodes, count);
+        while(true){
+            //stop motor and scan
+            drv->stop();
+            drv->setMotorSpeed(0);
+            //waiting until signal to start
+            while(!localizer.isStarted()){
+                if (stop_signal_received) {
+                    break;
+                }
+            }
+            //start scanning
+            drv->startScan(false, true);
+            while(localizer.isStarted()) {
+                //get scan data
+                sl_lidar_response_measurement_node_hq_t nodes[8192];
+                size_t count = get_size(nodes);
+                op_result = drv->grabScanDataHq(nodes, count);
+                if (SL_IS_OK(op_result)) {
+                    drv->ascendScanData(nodes, count);
+                    localizer.processPoints(nodes, count);
+                }
+                if (stop_signal_received) {
+                    break;
+                }
             }
             if (stop_signal_received) {
                 break;
             }
         }
+        localizer.stop();
         drv->stop();
         drv->setMotorSpeed(0);
         drv->disconnect();

@@ -1,5 +1,43 @@
 #include "localization.h"
 
+void Localization::setLidarHealth(bool ok){
+    this->lidarHealth = ok;
+}
+
+
+bool Localization::getLidarHealth() const{
+    return this->lidarHealth;
+}
+
+
+void Localization::setRobotPosition(int x, int y, int alpha){
+    this->x_robot = x;
+    this->y_robot = y;
+    this->alpha_robot = alpha;
+}
+
+
+vector<int> Localization::getRobotPosition() const{
+    vector<int> data;
+    data.push_back(this->x_robot);
+    data.push_back(this->y_robot);
+    return data;
+}
+
+
+vector<int> Localization::getAvoidance() const{
+    vector<int> data;
+    data.push_back(this->enemyPosition.first);
+    data.push_back(this->enemyPosition.second);
+    data.push_back(this->enemyPositionGap);
+    return data;
+}
+
+
+bool Localization::isStarted() const{
+    return this->started;
+}
+
 
 pair<double, double> Localization::robotToCartesian(sl_lidar_response_measurement_node_hq_t node, int x_robot, int y_robot, int alpha_robot){
     double alpha_lidar = 2.f * M_PI - (double) node.angle_z_q14 * 0.5f * M_PI / 16384.f;
@@ -21,22 +59,21 @@ bool Localization::isInsideMap(pair<double, double> pos){
 }
 
 
-pair<int, int> Localization::averagePosition(list<pair<double, double>> positions){
+pair<int, int> Localization::averagePosition(const list<pair<double, double>>& positions){
     double total_x = 0;
     double total_y = 0;
     int n = 0;
-    for (auto iter = positions.begin(); iter != positions.end(); iter++) {
+    for (auto & position : positions) {
         n++;
-        total_x += (*iter).first;
-        total_y += (*iter).second;
+        total_x += position.first;
+        total_y += position.second;
     }
     if (n > 0) {
         int x_average = (int) total_x / n;
         int y_average = (int) total_y / n;
-        pair<double, double> average = make_pair(x_average, y_average);
-        return average;
+        return make_pair(x_average, y_average);
     } else {
-        //TODO : pas de points => pas de moyenne
+        return make_pair(-1, -1);
     }
 }
 
@@ -51,10 +88,10 @@ int Localization::getBeaconNumber(pair<double, double> position){
 }
 
 
-int getMaxGap(list<pair<double, double>> positionList, pair<int, int> referencePosition){
+int Localization::getMaxGap(const list<pair<double, double>>& positionList, pair<int, int> referencePosition){
     int maxGap = 0;
-    for (auto iter = positionList.begin(); iter != positionList.end(); iter++) {
-        int gap = sqrt(pow((*iter).first - referencePosition.first, 2) + pow((*iter).second - referencePosition.second, 2));
+    for (auto & iter : positionList) {
+        int gap = (int)sqrt(pow(iter.first - referencePosition.first, 2) + pow(iter.second - referencePosition.second, 2));
         if(gap > maxGap){
             maxGap = gap;
         }
@@ -63,7 +100,7 @@ int getMaxGap(list<pair<double, double>> positionList, pair<int, int> referenceP
 }
 
 
-pair<int, int> getCircleCenter(list<pair<double, double>> detectedPositions, int radius){
+pair<int, int> Localization::getCircleCenter(list<pair<double, double>> detectedPositions, int radius){
     // Implementing https://math.stackexchange.com/a/1781546
     list<pair<double, double>> deductedCenters;
     double min_x = (*detectedPositions.begin()).first;
@@ -118,10 +155,13 @@ pair<int, int> getCircleCenter(list<pair<double, double>> detectedPositions, int
 }
 
 
-void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], int count){
+void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count){
     list<pair<double, double>> points_inside;
     list<pair<double, double>> beacons_points[3];
     for (int pos = 0; pos < count; ++pos) {
+        if((float)nodes[pos].dist_mm_q2 / 4.0f < (float)PROXIMITY_ALERT_RANGE){
+            this->sendProximityAlert((int)((float)nodes[pos].dist_mm_q2 / 4.0f), (int)((float)nodes[pos].angle_z_q14 / 16384.f));
+        }
         pair<int, int> position = this->robotToCartesian(nodes[pos], this->x_robot, this->y_robot, this->alpha_robot);
         if(this->isInsideMap(position)){
             points_inside.emplace_back(position);
@@ -142,13 +182,59 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
         yBeaconsShift = yBeaconsShift + yShift/3;
     }
     //TODO remove false detections
-    //TODO check agglomeration of points and keep only the one next to the ennemy previous position => replace points_inside by agglomerate points in next lines
+    //TODO check agglomeration of points and keep only the one next to the enemy previous position => replace points_inside by agglomerate points in next lines
     pair<int, int> averageDetection = this->averagePosition(points_inside);
     int maxGap = this->getMaxGap(points_inside, averageDetection);
     //All writes at the same time to prevent inconsistent data
     this->x_robot = this->x_robot + xBeaconsShift;
     this->y_robot = this->y_robot + yBeaconsShift;
-    this->ennemyPosition = averageDetection;
-    this->ennemyPositionGap = maxGap;
-    this->lastUpdate = (uint64_t)chrono::duration_cast<chrono::milliseconds>(chrono::system_clock::now().time_since_epoch()).count();
+    this->enemyPosition = averageDetection;
+    this->enemyPositionGap = maxGap;
+}
+
+
+void Localization::sendMessage(const string& recipient, const string& verb, const string& data){
+    this->TCPClient::sendMessage(("lidar;" + recipient + ";" + verb + ";" + data).c_str());
+}
+
+
+void Localization::handleMessage(const std::string &message) {
+    vector<string> tokens = split(message, ";");
+    string issuer = tokens[0];
+    string recipient = tokens[1];
+    string verb = tokens[2];
+    string data = tokens[3];
+    if(contains(recipient, "lidar") || contains(recipient, "all")){
+        if(contains(verb, "ping")){
+            this->sendMessage(issuer, "pong", "");
+        }
+        if(contains(verb, "get health")){
+            if(this->getLidarHealth()){
+                this->sendMessage(issuer, "set health", "1");
+            } else {
+                this->sendMessage(issuer, "set health", "0");
+            }
+        }
+        if(contains(verb, "get data")){
+            vector<int> position = this->getRobotPosition();
+            vector<int> avoidance = this->getAvoidance();
+            this->sendMessage(issuer, "set position", to_string(position[0]) + "," + to_string(position[1]));
+            this->sendMessage(issuer, "set avoidance", to_string(avoidance[0]) + "," + to_string(avoidance[1]) + "," + to_string(avoidance[2]));
+        }
+        if(contains(verb, "start")){
+            this->started = true;
+        }
+        if(contains(verb, "stop")){
+            this->started = false;
+        }
+        if(contains(verb, "set position")){
+            vector<string> position = split(data, ",");
+            this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
+        }
+    }
+}
+
+
+void Localization::sendProximityAlert(int distance, int tetha){
+    this->sendMessage("all", "stop proximity", to_string(distance) + "," + to_string(tetha));
 }
