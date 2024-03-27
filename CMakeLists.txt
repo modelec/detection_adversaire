@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 SET(CMAKE_CXX_FLAGS -pthread)
 
 include_directories(include)
-add_executable(${PROJECT_NAME} src/main.cpp src/localization.h src/localization.cpp ${TCP_CLIENT_PATH}/include/TCPSocket/TCPClient.hpp ${TCP_CLIENT_PATH}/include/TCPSocket/TCPUtils.hpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/localization.h src/localization.cpp)
 
 set(RPLIDAR_SDK_PATH "/home/isen/LIDAR")
 set(TCP_CLIENT_PATH "/home/isen/TCPSocketClient")
