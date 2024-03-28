@@ -18,6 +18,7 @@
 #include <TCPSocket/TCPUtils.hpp>
 
 using namespace std;
+using namespace TCPSocket;
 
 class Localization : public TCPClient{
 private:

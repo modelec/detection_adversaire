@@ -1,4 +1,5 @@
 #include <csignal>
+#include <thread>
 #include "localization.h"
 
 #ifndef get_size
@@ -12,6 +13,8 @@ void stop_loop(int) {
 }
 
 using namespace std;
+using namespace std::this_thread;
+using namespace std::chrono_literals;
 
 int main() {
     //TCP socket connection
@@ -36,6 +39,7 @@ int main() {
             drv->setMotorSpeed(0);
             //waiting until signal to start
             while(!localizer.isStarted()){
+                sleep_for(10ms);
                 if (stop_signal_received) {
                     break;
                 }
