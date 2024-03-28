@@ -16,9 +16,14 @@ using namespace std;
 using namespace std::this_thread;
 using namespace std::chrono_literals;
 
-int main() {
+int main(int argc, char* argv[]) {
     //TCP socket connection
-    Localization localizer("127.0.0.1", 8080);
+    int port = 8080;
+    if (argc == 2)
+    {
+        port = std::stoi(argv[1]);
+    }
+    Localization localizer("127.0.0.1", port);
     localizer.start();
     //LIDAR connection
     sl::Result<sl::IChannel *> channel = sl::createSerialPortChannel("/dev/ttyUSB0", 115200);
