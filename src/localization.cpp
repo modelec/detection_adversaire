@@ -48,7 +48,7 @@ pair<double, double> Localization::robotToCartesian(sl_lidar_response_measuremen
         alpha = alpha + 2.f * M_PI;
     }
     double x_detected =  x_robot + (double) node.dist_mm_q2 / 4.0f * cos(alpha);
-    double y_detected = y_robot + (double) node.dist_mm_q2 / 4.0f * sin(alpha);
+    double y_detected = y_robot - (double) node.dist_mm_q2 / 4.0f * sin(alpha);
     pair<double, double> position = make_pair(x_detected, y_detected);
     return position;
 }
