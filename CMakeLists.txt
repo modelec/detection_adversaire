@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.25)
 
 project(lidar)
 
@@ -12,7 +12,7 @@ pkg_check_modules(TCPSocket REQUIRED TCPSocket)
 include_directories(include)
 add_executable(${PROJECT_NAME} src/main.cpp src/localization.h src/localization.cpp)
 
-set(RPLIDAR_SDK_PATH "/home/modelec/rplidar_sdk")
+set(RPLIDAR_SDK_PATH "/home/isen/rplidar_sdk")
 
 add_library(rplidar STATIC IMPORTED)
 
