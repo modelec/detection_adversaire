@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     {
         port = std::stoi(argv[1]);
     }
-    Localization localizer("127.0.0.1", port);
+    Localization localizer(-1, -1, -1, "127.0.0.1", port);
     localizer.start();
     //LIDAR connection
     sl::Result<sl::IChannel *> channel = sl::createSerialPortChannel("/dev/ttyUSB0", 115200);

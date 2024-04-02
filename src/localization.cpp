@@ -182,17 +182,25 @@ vector<list<pair<double, double>>> Localization::getAgglomerates(list<pair<doubl
             distance_to_next = Localization::distanceBetween(*next(it), *it);
         }
         if (distance_from_prev > AGGLOMERATES_TRIGGER && distance_to_next > AGGLOMERATES_TRIGGER) {
-            //Remove solo points
+            //Removing solo points
             positionsList.erase(it);
         } else {
             if(distance_to_next > AGGLOMERATES_TRIGGER){
                 i++;
             }
+            //Agglomerating points nexts to each others
             agglomerated_points[i].push_back(*it);
         }
         it++;
     }
-    //TODO : check if last agglomerate and first one are the same and if so merge them
+    //Checking if last agglomerate and first one are the same and if so merge them
+    if(agglomerated_points.size() > 1 && Localization::distanceBetween(*positionsList.begin(), *positionsList .end()) < AGGLOMERATES_TRIGGER){
+        list<pair<double, double>> lastAgglomerate = *agglomerated_points.end();
+        list<pair<double, double>> firstAgglomerate = *agglomerated_points.begin();
+        firstAgglomerate.splice(firstAgglomerate.end(), lastAgglomerate);
+        agglomerated_points.erase(agglomerated_points.end());
+        agglomerated_points[0] = firstAgglomerate;
+    }
     return agglomerated_points;
 }
 
