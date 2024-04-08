@@ -2,17 +2,14 @@
 #define LIDAR_LOCALIZATION_H
 
 #define NODES_LEN 8192
-#define MAX_TABLE_X 3000
+#define MAX_TABLE_X 1500
 #define MAX_TABLE_Y 2000
 #define BEACON_DETECT_RANGE 100
-#define PROXIMITY_ALERT_RANGE 200
+#define PROXIMITY_ALERT_RANGE 250
 #define AGGLOMERATES_TRIGGER 100
-#define OBSTRUCTIONS_DEGREES {10, 20, 30}
-#define OBSTRUCTIONS_WIDTH_DEGREES 1
 #define BEACONS_RADIUS 50
 
 #include <iostream>
-#include <cstdint>
 #include <cmath>
 #include <list>
 #include <chrono>
@@ -30,7 +27,7 @@ private:
     int y_robot;
     int alpha_robot;
     int robotPositionGap = -1;
-    pair<int, int> enemyPosition;
+    pair<int, int> enemyPosition = make_pair(-1, -1);
     int enemyPositionGap = -1;
     pair<int, int> beaconsPositions[3];
     int beaconsRadius = BEACONS_RADIUS;

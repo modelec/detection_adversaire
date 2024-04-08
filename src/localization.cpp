@@ -43,8 +43,12 @@ bool Localization::isStarted() const {
 pair<double, double>
 Localization::robotToCartesian(sl_lidar_response_measurement_node_hq_t node, int x_robot, int y_robot,
                                int alpha_robot) {
-    double alpha_lidar = 2.f * M_PI - (double) node.angle_z_q14 * 0.5f * M_PI / 16384.f;
-    double alpha = alpha_robot + alpha_lidar;
+    //lidar angle ((double) node.angle_z_q14 * 90.f) / 16384.f is in degrees so we divide by 360 and multiply by 2pi
+    //lidar rotation is anti-trigonometric, so we do 2pi * (1 - alpha_degrees)
+    //lidar is facing the back of the robot, so we add pi to this angle => 2pi * (0.5 - alpha_degrees)
+    double alpha_lidar = 2.f * M_PI * (0.5 - (((double) node.angle_z_q14 * 90.f) / 16384.f) / 360.f);
+    //alpha_robot is in hundredths of radians
+    double alpha = (double)alpha_robot/100 + alpha_lidar;
     if (alpha > 2.f * M_PI) {
         alpha = alpha - 2.f * M_PI;
     } else if (alpha < 0) {
@@ -166,37 +170,42 @@ pair<int, int> Localization::getCircleCenter(list<pair<double, double>> detected
 
 vector<list<pair<double, double>>> Localization::getAgglomerates(list<pair<double, double>> &positionsList) {
     vector<list<pair<double, double>>> agglomerated_points;
+    list<pair<double, double>> new_list;
+    agglomerated_points.push_back(new_list);
     unsigned int i=0;
     auto it = positionsList.begin();
     while (it != positionsList.end()) {
         double distance_from_prev;
         double distance_to_next;
         if (it == positionsList.begin()) {
-            distance_from_prev = Localization::distanceBetween(*positionsList.end(), *it);
+            distance_from_prev = Localization::distanceBetween(positionsList.back(), *it);
             distance_to_next = Localization::distanceBetween(*next(it), *it);
         } else if (it == prev(positionsList.end())) {
             distance_from_prev = Localization::distanceBetween(*prev(it), *it);
-            distance_to_next = Localization::distanceBetween(*positionsList.begin(), *it);
+            distance_to_next = Localization::distanceBetween(positionsList.front(), *it);
         } else {
             distance_from_prev = Localization::distanceBetween(*prev(it), *it);
             distance_to_next = Localization::distanceBetween(*next(it), *it);
         }
         if (distance_from_prev > AGGLOMERATES_TRIGGER && distance_to_next > AGGLOMERATES_TRIGGER) {
             //Removing solo points
-            positionsList.erase(it);
+            //Do not move it++ elsewhere (https://stackoverflow.com/questions/596162/can-you-remove-elements-from-a-stdlist-while-iterating-through-it)
+            positionsList.erase(it++);
         } else {
             if(distance_to_next > AGGLOMERATES_TRIGGER){
+                list<pair<double, double>> empty_list;
+                agglomerated_points.push_back(empty_list);
                 i++;
             }
-            //Agglomerating points nexts to each others
+            //Agglomerating points next to each others
             agglomerated_points[i].push_back(*it);
+            it++;
         }
-        it++;
     }
     //Checking if last agglomerate and first one are the same and if so merge them
-    if(agglomerated_points.size() > 1 && Localization::distanceBetween(*positionsList.begin(), *positionsList .end()) < AGGLOMERATES_TRIGGER){
-        list<pair<double, double>> lastAgglomerate = *agglomerated_points.end();
-        list<pair<double, double>> firstAgglomerate = *agglomerated_points.begin();
+    if(agglomerated_points.size() > 1 && Localization::distanceBetween(positionsList.front(), positionsList.back()) < AGGLOMERATES_TRIGGER){
+        list<pair<double, double>> lastAgglomerate = agglomerated_points.back();
+        list<pair<double, double>> firstAgglomerate = agglomerated_points.front();
         firstAgglomerate.splice(firstAgglomerate.end(), lastAgglomerate);
         agglomerated_points.erase(agglomerated_points.end());
         agglomerated_points[0] = firstAgglomerate;
@@ -225,24 +234,21 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     list<pair<double, double>> points_inside;
     list<pair<double, double>> beacons_points[3];
     for (int pos = 0; pos < count; ++pos) {
-        //Checking for direct proximity
-        if(nodes[pos].dist_mm_q2 < PROXIMITY_ALERT_RANGE){
-            double angle_degrees = (double)nodes[pos].angle_z_q14 / 16384.f;
-            double obstructed_angles_degrees[3] = OBSTRUCTIONS_DEGREES;
-            double precision = (double)OBSTRUCTIONS_WIDTH_DEGREES/2;
-            //Removing obstructed angles from proximity alert
-            if(angle_degrees < obstructed_angles_degrees[0]-precision && angle_degrees > obstructed_angles_degrees[0]+precision && angle_degrees < obstructed_angles_degrees[1]-precision && angle_degrees > obstructed_angles_degrees[1]+precision && angle_degrees < obstructed_angles_degrees[2]-precision && angle_degrees > obstructed_angles_degrees[2]+precision){
-                this->sendProximityAlert((int)nodes[pos].dist_mm_q2, (int)nodes[pos].angle_z_q14 / 16384);
+        //checking measurement quality
+        if(nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
+            //Checking for direct proximity
+            if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE){
+                this->sendProximityAlert((int)((double)nodes[pos].dist_mm_q2/4.0f), (int)(((double)nodes[pos].angle_z_q14 * 90.f) / 16384.f));
             }
-        }
-        //Select points inside map and next to beacons
-        pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot, this->alpha_robot);
-        if (Localization::isInsideMap(position)) {
-            points_inside.emplace_back(position);
-        } else {
-            int beaconNumber = this->getBeaconNumber(position);
-            if (beaconNumber != -1) {
-                beacons_points[beaconNumber].emplace_back(position);
+            //Select points inside map and next to beacons
+            pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot, this->alpha_robot);
+            if (Localization::isInsideMap(position)) {
+                points_inside.emplace_back(position);
+            } else {
+                int beaconNumber = this->getBeaconNumber(position);
+                if (beaconNumber != -1) {
+                    beacons_points[beaconNumber].emplace_back(position);
+                }
             }
         }
     }
@@ -253,18 +259,18 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     //Measure beacons shift
     int xBeaconsShift = 0;
     int yBeaconsShift = 0;
-    for (int i = 0; i < 3; i++) {
+    /*for (int i = 0; i < 3; i++) {
         pair<int, int> beaconDetectedPosition = Localization::getCircleCenter(beacons_points[i], this->beaconsRadius);
         int xShift = beaconDetectedPosition.first - this->beaconsPositions[i].first;
         int yShift = beaconDetectedPosition.second - this->beaconsPositions[i].second;
         xBeaconsShift = xBeaconsShift + xShift / 3;
         yBeaconsShift = yBeaconsShift + yShift / 3;
-    }
+    }*/
 
     int maxGap = Localization::getMaxGap(points_inside, averageDetection);
     //All writes at the same time to prevent inconsistent data
-    this->x_robot = this->x_robot + xBeaconsShift;
-    this->y_robot = this->y_robot + yBeaconsShift;
+    //this->x_robot = this->x_robot + xBeaconsShift;
+    //this->y_robot = this->y_robot + yBeaconsShift;
     this->enemyPosition = averageDetection;
     this->enemyPositionGap = maxGap;
 }
