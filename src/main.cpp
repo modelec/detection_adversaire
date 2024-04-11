@@ -36,6 +36,7 @@ int main(int argc, char* argv[]) {
         op_result = drv->getHealth(healthinfo);
         if (SL_IS_OK(op_result)) {
             localizer.setLidarHealth(true);
+            localizer.sendMessage("lidar;strat;ready;1")
         }
         signal(SIGINT, stop_loop);
         while(true){
