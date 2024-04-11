@@ -25,6 +25,7 @@ int main(int argc, char* argv[]) {
     }
     Localization localizer(-1, -1, -1, "127.0.0.1", port);
     localizer.start();
+    localizer.sendMessage("strat", "ready", "1");
     //LIDAR connection
     sl::Result<sl::IChannel *> channel = sl::createSerialPortChannel("/dev/ttyUSB0", 115200);
     sl::ILidarDriver *drv = *sl::createLidarDriver();
