@@ -17,12 +17,22 @@ void Localization::setRobotPosition(int x, int y, int alpha) {
 }
 
 
+void Localization::setBeaconsMode(bool state){
+    this->beaconsMode = state;
+}
+
+
 vector<int> Localization::getRobotPosition() const {
     vector<int> data;
     data.push_back(this->x_robot);
     data.push_back(this->y_robot);
     data.push_back(this->robotPositionGap);
     return data;
+}
+
+
+bool Localization::getBeaconsMode() const{
+    return this->beaconsMode;
 }
 
 
@@ -67,7 +77,8 @@ int Localization::distanceBetween(pair<double, double> pos1, pair<double, double
 
 
 bool Localization::isInsideMap(pair<double, double> pos) {
-    return (pos.first < MAX_TABLE_X && pos.first > 0.f && pos.second < MAX_TABLE_Y && pos.second > 0.f);
+    //Trigger used here to prevent border false detections due to
+    return (pos.first + BORDER_DETECT_TRIGGER < MAX_TABLE_X && pos.first - BORDER_DETECT_TRIGGER > 0.f && pos.second + BORDER_DETECT_TRIGGER < MAX_TABLE_Y && pos.second - BORDER_DETECT_TRIGGER > 0.f);
 }
 
 
@@ -214,9 +225,10 @@ vector<list<pair<double, double>>> Localization::getAgglomerates(list<pair<doubl
 }
 
 
-pair<int, int> Localization::getMostProbableAgglomerateAveragePos(vector<list<pair<double, double>>> &agglomerated_points) {
+list<pair<double, double>> Localization::getMostProbableAgglomerate(vector<list<pair<double, double>>> &agglomerated_points) {
     pair<int ,int> last_enemy_pos = this->enemyPosition;
     pair<int, int> most_probable_average = Localization::getAveragePosition(agglomerated_points[0]);
+    unsigned int most_probable_index = 0;
     int best_distance = Localization::distanceBetween(most_probable_average, last_enemy_pos);
     for(unsigned int i=1; i<agglomerated_points.size(); i++){
         pair<int, int>agglomerate_average = Localization::getAveragePosition(agglomerated_points[i]);
@@ -224,21 +236,28 @@ pair<int, int> Localization::getMostProbableAgglomerateAveragePos(vector<list<pa
         if(distance < best_distance){
             best_distance = distance;
             most_probable_average = agglomerate_average;
+            most_probable_index = i;
         }
     }
-    return most_probable_average;
+    return agglomerated_points[most_probable_index];
 }
 
 
 void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count) {
     list<pair<double, double>> points_inside;
     list<pair<double, double>> beacons_points[3];
+    bool proximityAlert = false;
     for (int pos = 0; pos < count; ++pos) {
         //checking measurement quality
         if(nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
             //Checking for direct proximity
-            if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE){
-                this->sendProximityAlert((int)((double)nodes[pos].dist_mm_q2/4.0f), (int)(((double)nodes[pos].angle_z_q14 * 90.f) / 16384.f));
+            if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE) {
+                proximityAlert = true;
+                if (this->proximityLastRound) {
+                    int angle_radians = (int)((((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f) * 2.f * M_PI / 360.f);
+                    int angle_robot_base = angle_radians > 2*M_PI ? angle_radians - M_PI : angle_radians + M_PI;
+                    this->sendProximityAlert((int) ((double) nodes[pos].dist_mm_q2 / 4.0f),angle_robot_base);
+                }
             }
             //Select points inside map and next to beacons
             pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot, this->alpha_robot);
@@ -255,7 +274,9 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     //Get agglomerates without solo points
     vector<list<pair<double, double>>> agglomerated_points = Localization::getAgglomerates(points_inside);
     //Get most probable agglomerate average position
-    pair<int, int> averageDetection = Localization::getMostProbableAgglomerateAveragePos(agglomerated_points);
+    list<pair<double, double>> ennemyAgglomerate = Localization::getMostProbableAgglomerate(agglomerated_points);
+    pair<int,int> averageDetection = Localization::getAveragePosition(ennemyAgglomerate);
+    int maxGap = Localization::getMaxGap(ennemyAgglomerate, averageDetection);
     //Measure beacons shift
     int xBeaconsShift = 0;
     int yBeaconsShift = 0;
@@ -267,12 +288,13 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
         yBeaconsShift = yBeaconsShift + yShift / 3;
     }*/
 
-    int maxGap = Localization::getMaxGap(points_inside, averageDetection);
     //All writes at the same time to prevent inconsistent data
+    //TODO : appliquer la même transformation à la position ennemie que celle appliquée à la position du robot
     //this->x_robot = this->x_robot + xBeaconsShift;
     //this->y_robot = this->y_robot + yBeaconsShift;
     this->enemyPosition = averageDetection;
     this->enemyPositionGap = maxGap;
+    this->proximityLastRound = proximityAlert;
 }
 
 
@@ -311,6 +333,13 @@ void Localization::handleMessage(const std::string &message) {
             this->started = false;
         }
         if (contains(verb, "set position")) {
+            vector<string> position = split(data, ",");
+            this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
+        }
+        if (contains(verb, "set beacon mode")) {
+            this->setBeaconsMode(stoi(data));
+        }
+        if (contains(verb, "set beacon position")) {
             vector<string> position = split(data, ",");
             this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
         }
