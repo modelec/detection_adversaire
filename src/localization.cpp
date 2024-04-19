@@ -332,7 +332,7 @@ void Localization::handleMessage(const std::string &message) {
         if (contains(verb, "stop")) {
             this->started = false;
         }
-        if (contains(verb, "set position")) {
+        if (contains(verb, "set pos")) {
             vector<string> position = split(data, ",");
             this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
         }
