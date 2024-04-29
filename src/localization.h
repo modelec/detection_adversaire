@@ -6,7 +6,8 @@
 #define MAX_TABLE_Y 2000
 #define BEACON_DETECT_RANGE 100
 #define PROXIMITY_ALERT_RANGE 250
-#define AGGLOMERATES_TRIGGER 100
+#define BORDER_DETECT_TRIGGER 50
+#define AGGLOMERATES_TRIGGER 250
 #define BEACONS_RADIUS 50
 
 #include <iostream>
@@ -33,6 +34,8 @@ private:
     int beaconsRadius = BEACONS_RADIUS;
     bool lidarHealth = false;
     bool started = false;
+    bool beaconsMode = false;
+    bool proximityLastRound = false;
 public:
     Localization(int x_robot, int y_robot, int alpha_robot, const char* ip = "127.0.0.1", int port = 8080) : TCPClient(ip, port) {
         this->x_robot = x_robot;
@@ -41,8 +44,10 @@ public:
     };
     void setLidarHealth(bool ok);
     void setRobotPosition(int x, int y, int alpha);
+    void setBeaconsMode(bool state);
     [[nodiscard]] bool getLidarHealth() const;
     [[nodiscard]] vector<int> getRobotPosition() const;
+    [[nodiscard]] bool getBeaconsMode() const;
     [[nodiscard]] vector<int> getAvoidance() const;
     [[nodiscard]] bool isStarted() const;
     static pair<double, double> robotToCartesian(sl_lidar_response_measurement_node_hq_t node, int x_robot, int y_robot, int alpha_robot);
@@ -52,7 +57,7 @@ public:
     static int getMaxGap(const list<pair<double, double>>& positionList, pair<int, int> referencePosition);
     static pair<int, int> getCircleCenter(list<pair<double, double>> detectedPositions, int radius);
     static vector<list<pair<double, double>>> getAgglomerates(list<pair<double, double>> &positionsList);
-    pair<int, int> getMostProbableAgglomerateAveragePos(vector<list<pair<double, double>>> &agglomerated_points);
+    list<pair<double, double>> getMostProbableAgglomerate(vector<list<pair<double, double>>> &agglomerated_points);
     int getBeaconNumber(pair<double, double> position);
     void processPoints(sl_lidar_response_measurement_node_hq_t[NODES_LEN], size_t count);
     void handleMessage(const string &message) override;

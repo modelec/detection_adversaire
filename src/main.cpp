@@ -6,7 +6,7 @@
 #define get_size(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
 #endif
 
-bool stop_signal_received;
+bool stop_signal_received = false;
 
 void stop_loop(int) {
     stop_signal_received = true;
