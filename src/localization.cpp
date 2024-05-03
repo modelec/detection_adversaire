@@ -312,7 +312,7 @@ void Localization::handleMessage(const std::string &message) {
     string data = tokens[3];
     if (contains(recipient, "lidar") || contains(recipient, "all")) {
         if (contains(verb, "ping")) {
-            this->sendMessage(issuer, "pong", "");
+            this->sendMessage(issuer, "pong", "1");
         }
         if (contains(verb, "get health")) {
             if (this->getLidarHealth()) {
