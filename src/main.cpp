@@ -53,14 +53,42 @@ int main(int argc, char* argv[]) {
             }
             //start scanning
             drv->startScan(false, true);
+            bool alreadyInTriangulationMode = false;
+            vector<pair<double, double>> overallNearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
+            unsigned int measurementCounter = 0;
             while(localizer.isStarted()) {
-                //get scan data
+                //Detect a first triangulation round
+                if(localizer.isTriangulating()){
+                    if(!alreadyInTriangulationMode){
+                        alreadyInTriangulationMode = true;
+                        fill(overallNearestBeaconDetectedPointRelative.begin(), overallNearestBeaconDetectedPointRelative.end(), make_pair(-1, -1));
+                        measurementCounter = 0;
+                    }
+                }
+                //Get scan data
                 sl_lidar_response_measurement_node_hq_t nodes[8192];
                 size_t count = get_size(nodes);
                 op_result = drv->grabScanDataHq(nodes, count);
                 if (SL_IS_OK(op_result)) {
                     drv->ascendScanData(nodes, count);
-                    localizer.processPoints(nodes, count);
+                    if(localizer.isTriangulating()){
+                        //Triangulation mode
+                        measurementCounter++;
+                        vector<pair<double, double>> nearestBeaconDetectedPointRelative = localizer.extractBeaconsMeasuredPoints(nodes, count);
+                        for(unsigned int i = 0; i<3; i++){
+                            if((nearestBeaconDetectedPointRelative[i].first < overallNearestBeaconDetectedPointRelative[i].first && nearestBeaconDetectedPointRelative[i].first != -1) || overallNearestBeaconDetectedPointRelative[i].first == -1){
+                                overallNearestBeaconDetectedPointRelative[i] = nearestBeaconDetectedPointRelative[i];
+                            }
+                        }
+                    } else {
+                        //Normal operation mode
+                        localizer.processPoints(nodes, count);
+                    }
+                }
+                //Detect a last triangulation round
+                if(measurementCounter == TRIANGULATION_ROUNDS){
+                    localizer.processTriangulation(overallNearestBeaconDetectedPointRelative);
+                    alreadyInTriangulationMode = false;
                 }
                 if (stop_signal_received) {
                     break;

@@ -9,10 +9,12 @@
 #define BORDER_DETECT_TRIGGER 50
 #define AGGLOMERATES_TRIGGER 250
 #define BEACONS_RADIUS 50
+#define TRIANGULATION_ROUNDS 3
 
 #include <iostream>
-#include <cmath>
+#include <vector>
 #include <list>
+#include <cmath>
 #include <chrono>
 #include <ctime>
 #include <rplidar.h>
@@ -27,15 +29,14 @@ private:
     int x_robot;
     int y_robot;
     int alpha_robot;
-    int robotPositionGap = -1;
     pair<int, int> enemyPosition = make_pair(-1, -1);
     int enemyPositionGap = -1;
     pair<int, int> beaconsPositions[3];
-    int beaconsRadius = BEACONS_RADIUS;
     bool lidarHealth = false;
     bool started = false;
-    bool beaconsMode = false;
+    bool beaconsMode = true;
     bool proximityLastRound = false;
+    bool triangulationMode = false;
 public:
     Localization(int x_robot, int y_robot, int alpha_robot, const char* ip = "127.0.0.1", int port = 8080) : TCPClient(ip, port) {
         this->x_robot = x_robot;
@@ -46,20 +47,22 @@ public:
     void setRobotPosition(int x, int y, int alpha);
     void setBeaconsMode(bool state);
     [[nodiscard]] bool getLidarHealth() const;
-    [[nodiscard]] vector<int> getRobotPosition() const;
     [[nodiscard]] bool getBeaconsMode() const;
     [[nodiscard]] vector<int> getAvoidance() const;
     [[nodiscard]] bool isStarted() const;
+    [[nodiscard]] bool isTriangulating() const;
     static pair<double, double> robotToCartesian(sl_lidar_response_measurement_node_hq_t node, int x_robot, int y_robot, int alpha_robot);
     static int distanceBetween(pair<double, double> pos1, pair<double, double> pos2);
     static bool isInsideMap(pair<double, double> position);
     static pair<int, int> getAveragePosition(const list<pair<double, double>> &positions);
     static int getMaxGap(const list<pair<double, double>>& positionList, pair<int, int> referencePosition);
-    static pair<int, int> getCircleCenter(list<pair<double, double>> detectedPositions, int radius);
     static vector<list<pair<double, double>>> getAgglomerates(list<pair<double, double>> &positionsList);
     list<pair<double, double>> getMostProbableAgglomerate(vector<list<pair<double, double>>> &agglomerated_points);
+    vector<int> determineRobotPosition(vector<pair<double, double>> beaconsDistanceAndAngleRelative, vector<bool> beaconsDetected);
+    vector<pair<double, double>> extractBeaconsMeasuredPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count);
     int getBeaconNumber(pair<double, double> position);
     void processPoints(sl_lidar_response_measurement_node_hq_t[NODES_LEN], size_t count);
+    void processTriangulation(const vector<pair<double, double>>& overallNearestBeaconDetectedPointRelative);
     void handleMessage(const string &message) override;
     void sendMessage(const string &recipient, const string &verb, const string &data);
     void sendProximityAlert(int distance, int theta);
