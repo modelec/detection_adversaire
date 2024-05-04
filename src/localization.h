@@ -10,6 +10,7 @@
 #define AGGLOMERATES_TRIGGER 250
 #define BEACONS_RADIUS 50
 #define TRIANGULATION_ROUNDS 3
+#define POSITION_CORRECT_RANGE 25
 #define YELLOW_TEAM_BEACONS_POS {make_pair(1,2), make_pair(3,4), make_pair(5,6)}
 #define BLUE_TEAM_BEACONS_POS {make_pair(1,2), make_pair(3,4), make_pair(5,6)}
 
@@ -38,6 +39,7 @@ private:
     bool started = false;
     bool beaconsMode = true;
     bool proximityLastRound = false;
+    bool positionIncorrectLastRound = false;
     bool triangulationMode = false;
 public:
     Localization(int x_robot, int y_robot, int alpha_robot, const char* ip = "127.0.0.1", int port = 8080) : TCPClient(ip, port) {

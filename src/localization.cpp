@@ -251,8 +251,10 @@ vector<int> Localization::determineRobotPosition(vector<pair<double, double>> be
 
 void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count) {
     list<pair<double, double>> points_inside;
-    pair<double, double> nearestBeaconDetectedPointRelative[3] = {make_pair(-1, -1)};
+    vector<pair<double, double>> nearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
+    vector<bool> beaconsDetected(3, false);
     bool proximityAlert = false;
+    bool positionIncorrect = false;
     for (int pos = 0; pos < count; ++pos) {
         //checking measurement quality
         if(nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
@@ -275,6 +277,7 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
                     if((double)nodes[pos].dist_mm_q2 / 4.0f < nearestBeaconDetectedPointRelative[beaconNumber].first || nearestBeaconDetectedPointRelative[beaconNumber].first == -1){
                         double angle_radians_non_trigo = (((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f) * 2.f * M_PI / 360.f;
                         nearestBeaconDetectedPointRelative[beaconNumber] = make_pair((double)nodes[pos].dist_mm_q2 / 4.0f, angle_radians_non_trigo);
+                        beaconsDetected[beaconNumber] = true;
                     }
                 }
             }
@@ -286,10 +289,22 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     list<pair<double, double>> ennemyAgglomerate = Localization::getMostProbableAgglomerate(agglomerated_points);
     pair<int,int> averageDetection = Localization::getAveragePosition(ennemyAgglomerate);
     int maxGap = Localization::getMaxGap(ennemyAgglomerate, averageDetection);
-    //TODO estimate robot pos and compare it with robot pos in variables. If too much difference then send alert message
     this->enemyPosition = averageDetection;
     this->enemyPositionGap = maxGap;
+    //Determine approximative robot position from beacons
+    vector<int> robotPos = this->determineRobotPosition(nearestBeaconDetectedPointRelative, beaconsDetected);
+    pair<int, int> robotMeasuredPos{robotPos[0], robotPos[1]};
+    pair<int, int> robotOdometryPos{this->x_robot, this->y_robot};
+    int positionSwitch = Localization::distanceBetween(robotMeasuredPos, robotOdometryPos);
+    if(positionSwitch > POSITION_CORRECT_RANGE){
+        positionIncorrect = true;
+        if(this->positionIncorrectLastRound){
+            this->sendMessage("strat", "stop recalibrate", to_string(positionSwitch));
+        }
+    }
+
     this->proximityLastRound = proximityAlert;
+    this->positionIncorrectLastRound = positionIncorrect;
 }
 
 
