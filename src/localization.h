@@ -10,6 +10,8 @@
 #define AGGLOMERATES_TRIGGER 250
 #define BEACONS_RADIUS 50
 #define TRIANGULATION_ROUNDS 3
+#define YELLOW_TEAM_BEACONS_POS {make_pair(1,2), make_pair(3,4), make_pair(5,6)}
+#define BLUE_TEAM_BEACONS_POS {make_pair(1,2), make_pair(3,4), make_pair(5,6)}
 
 #include <iostream>
 #include <vector>
@@ -46,6 +48,7 @@ public:
     void setLidarHealth(bool ok);
     void setRobotPosition(int x, int y, int alpha);
     void setBeaconsMode(bool state);
+    void setBeaconsPosition(pair<int, int> positions[3]);
     [[nodiscard]] bool getLidarHealth() const;
     [[nodiscard]] bool getBeaconsMode() const;
     [[nodiscard]] vector<int> getAvoidance() const;

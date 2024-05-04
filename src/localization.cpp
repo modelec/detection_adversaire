@@ -17,6 +17,13 @@ void Localization::setRobotPosition(int x, int y, int alpha) {
 }
 
 
+void Localization::setBeaconsPosition(pair<int, int> positions[3]){
+    for(unsigned int i = 0; i < 3; i++){
+        this->beaconsPositions[i] = positions[i];
+    }
+}
+
+
 void Localization::setBeaconsMode(bool state){
     this->beaconsMode = state;
 }
@@ -337,14 +344,19 @@ void Localization::handleMessage(const std::string &message) {
             vector<string> position = split(data, ",");
             this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
         }
-        if (contains(verb, "set beacon mode")) {
-            //Enable or disable beacons triangulation
+        if (contains(verb, "set beacon")) {
+            //Enable or disable beacons triangulation. This must be put to 0 if no beacons are on the table
             this->setBeaconsMode(stoi(data));
         }
-        if (contains(verb, "set beacon position")) {
+        if (contains(verb, "set team")) {
             //Update beacons position
-            vector<string> position = split(data, ",");
-            this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
+            if(stoi(data) == 0){
+                pair<int, int> positions[3] = BLUE_TEAM_BEACONS_POS;
+                this->setBeaconsPosition(positions);
+            } else if(stoi(data) == 1){
+                pair<int, int> positions[3] = YELLOW_TEAM_BEACONS_POS;
+                this->setBeaconsPosition(positions);
+            }
         }
         if (contains(verb, "get pos")) {
             //ONLY IF ROBOT IS STOPPED : measure robot position from multiple lidar runs.
