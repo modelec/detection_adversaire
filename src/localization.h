@@ -12,7 +12,7 @@
 #define TRIANGULATION_ROUNDS 3
 #define POSITION_CORRECT_RANGE 25
 #define YELLOW_TEAM_BEACONS_POS {make_pair(1,2), make_pair(3,4), make_pair(5,6)}
-#define BLUE_TEAM_BEACONS_POS {make_pair(1,2), make_pair(3,4), make_pair(5,6)}
+#define BLUE_TEAM_BEACONS_POS {make_pair(-94,72), make_pair(-94,1928), make_pair(1594,1000)}
 
 #include <iostream>
 #include <vector>
@@ -62,12 +62,16 @@ public:
     static pair<int, int> getAveragePosition(const list<pair<double, double>> &positions);
     static int getMaxGap(const list<pair<double, double>>& positionList, pair<int, int> referencePosition);
     static vector<list<pair<double, double>>> getAgglomerates(list<pair<double, double>> &positionsList);
+    static int rplidarToTrigoRadians(double rplidarDegrees);
+    static pair<double, double> lineEquationFromPoints(pair<double, double> p1, pair<double, double> p2);
+    static vector<pair<double,double>> intersectionBetweenCircles(pair<double,double> c1, double r1, pair<double,double> c2, double r2);
+    static pair<double,double> intersectionBetweenLines(pair<double,double> l1, pair<double,double> l2);
     list<pair<double, double>> getMostProbableAgglomerate(vector<list<pair<double, double>>> &agglomerated_points);
-    vector<int> determineRobotPosition(vector<pair<double, double>> beaconsDistanceAndAngleRelative, vector<bool> beaconsDetected);
-    vector<pair<double, double>> extractBeaconsMeasuredPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count);
+    vector<int> determineRobotPosition(vector<pair<double, int>> beaconsDistanceAndAngleRelative, vector<bool> beaconsDetected);
+    vector<pair<double, int>> extractBeaconsMeasuredPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count);
     int getBeaconNumber(pair<double, double> position);
     void processPoints(sl_lidar_response_measurement_node_hq_t[NODES_LEN], size_t count);
-    void processTriangulation(const vector<pair<double, double>>& overallNearestBeaconDetectedPointRelative);
+    void processTriangulation(const vector<pair<double, int>>& overallNearestBeaconDetectedPointRelative);
     void handleMessage(const string &message) override;
     void sendMessage(const string &recipient, const string &verb, const string &data);
     void sendProximityAlert(int distance, int theta);

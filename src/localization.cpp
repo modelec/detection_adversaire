@@ -171,12 +171,62 @@ vector<list<pair<double, double>>> Localization::getAgglomerates(list<pair<doubl
     return agglomerated_points;
 }
 
+int Localization::rplidarToTrigoRadians(double rplidarDegrees){
+    int angle_cent_radians = (int)(rplidarDegrees * 200.f * M_PI / 360.f);
+    angle_cent_radians = angle_cent_radians + (int)(100 * M_PI);
+    if(angle_cent_radians > 200 * M_PI){
+        angle_cent_radians = (int)(angle_cent_radians - 200 * M_PI);
+    }
+    return (int)(200 * M_PI - angle_cent_radians);
+}
+
+
+pair<double, double> Localization::lineEquationFromPoints(pair<double, double> p1, pair<double, double> p2){
+    double a = (p2.second - p1.second) / (p2.first - p1.first);
+    double b = p1.second - a * p1.first;
+    return make_pair(a, b);
+}
+
+
+vector<pair<double,double>> Localization::intersectionBetweenCircles(pair<double,double> p0, double r0, pair<double,double> p1, double r1){
+    //https://paulbourke.net/geometry/circlesphere/
+    double a, dx, dy, d, h, rx, ry;
+    double x2, y2;
+    dx = p1.first - p0.first;
+    dy = p1.second - p0.second;
+    d = hypot(dx,dy);
+    if (d > (r0 + r1))
+    {
+        return {make_pair(-1, -1), make_pair(-1, -1)};
+    }
+    if (d < fabs(r0 - r1))
+    {
+        return {make_pair(-1, -1), make_pair(-1, -1)};
+    }
+    a = ((r0*r0) - (r1*r1) + (d*d)) / (2.0 * d) ;
+    x2 = p0.first + (dx * a/d);
+    y2 = p0.second + (dy * a/d);
+    h = sqrt((r0*r0) - (a*a));
+    rx = -dy * (h/d);
+    ry = dx * (h/d);
+    return {make_pair(x2 + rx, y2 + ry), make_pair(x2 - rx, y2 - ry)};
+}
+
+
+pair<double,double> Localization::intersectionBetweenLines(pair<double,double> l1, pair<double,double> l2){
+    pair<double, double> intersection;
+    double x_intersect = (l2.second - l1.second) / (l1.first - l2.first);
+    double y_intersect = l1.first * x_intersect + l1.second;
+    return make_pair(x_intersect, y_intersect);
+}
+
 
 list<pair<double, double>> Localization::getMostProbableAgglomerate(vector<list<pair<double, double>>> &agglomerated_points) {
     pair<int ,int> last_enemy_pos = this->enemyPosition;
     unsigned int most_probable_index = 0;
     int best_distance = Localization::distanceBetween(Localization::getAveragePosition(agglomerated_points[0]), last_enemy_pos);
-    for(unsigned int i=1; i<agglomerated_points.size(); i++){
+    int n = (int)agglomerated_points.size();
+    for(unsigned int i=1; i<n; i++){
         pair<int, int>agglomerate_average = Localization::getAveragePosition(agglomerated_points[i]);
         int distance = Localization::distanceBetween(agglomerate_average, last_enemy_pos);
         if(distance < best_distance){
@@ -188,8 +238,8 @@ list<pair<double, double>> Localization::getMostProbableAgglomerate(vector<list<
 }
 
 
-vector<pair<double, double>> Localization::extractBeaconsMeasuredPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count) {
-    vector<pair<double, double>> nearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
+vector<pair<double, int>> Localization::extractBeaconsMeasuredPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count) {
+    vector<pair<double, int>> nearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
     for (int pos = 0; pos < count; ++pos) {
         //checking measurement quality
         if(nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
@@ -198,9 +248,9 @@ vector<pair<double, double>> Localization::extractBeaconsMeasuredPoints(sl_lidar
             if(this->getBeaconsMode()) {
                 int beaconNumber = this->getBeaconNumber(position);
                 if(beaconNumber != -1){
-                    if ((double) nodes[pos].dist_mm_q2 / 4.0f < nearestBeaconDetectedPointRelative[beaconNumber].first || nearestBeaconDetectedPointRelative[beaconNumber].first == -1) {
-                        double angle_radians_non_trigo = (((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f) * 2.f * M_PI / 360.f;
-                        nearestBeaconDetectedPointRelative[beaconNumber] = make_pair((double) nodes[pos].dist_mm_q2 / 4.0f, angle_radians_non_trigo);
+                    if ((double) nodes[pos].dist_mm_q2 / 4.0 < nearestBeaconDetectedPointRelative[beaconNumber].first || nearestBeaconDetectedPointRelative[beaconNumber].first == -1) {
+                        int angle_radians = Localization::rplidarToTrigoRadians(((double)nodes[pos].angle_z_q14 * 90.0) / 16384.0);
+                        nearestBeaconDetectedPointRelative[beaconNumber] = make_pair((double) nodes[pos].dist_mm_q2 / 4.0, angle_radians);
                     }
                 }
             }
@@ -210,48 +260,43 @@ vector<pair<double, double>> Localization::extractBeaconsMeasuredPoints(sl_lidar
 }
 
 
-vector<int> Localization::determineRobotPosition(vector<pair<double, double>> beaconsDistanceAndAngleRelative, vector<bool> beaconsDetected) {
+vector<int> Localization::determineRobotPosition(vector<pair<double, int>> beaconsDistanceAndAngleRelative, vector<bool> beaconsDetected) {
     pair<int, int>* beaconsPos = this->beaconsPositions;
-    /* GETTING MEDIATORS CARTESIAN EQUATIONS */
+    for(unsigned int i=0; i<3; i++){
+    }
     list<pair<double, double>> circlesIntersectionsEquations;
     if(beaconsDetected[0] && beaconsDetected[1]){
-        double a = (double)(beaconsPos[1].first - beaconsPos[0].first)/(beaconsPos[0].second - beaconsPos[1].second);
-        double b = (pow(beaconsDistanceAndAngleRelative[0].first + BEACONS_RADIUS, 2) + pow(beaconsDistanceAndAngleRelative[1].first + BEACONS_RADIUS, 2))/(2*(beaconsPos[0].second - beaconsPos[1].second));
-        circlesIntersectionsEquations.emplace_back(a, b);
+        vector<pair<double,double>> intersectCircles =  Localization::intersectionBetweenCircles(beaconsPos[0], beaconsDistanceAndAngleRelative[0].first + (double)BEACONS_RADIUS, beaconsPos[1], beaconsDistanceAndAngleRelative[1].first + (double)BEACONS_RADIUS);
+        pair<double, double> lineEquation =  Localization::lineEquationFromPoints(intersectCircles[0], intersectCircles[1]);
+        circlesIntersectionsEquations.emplace_back(lineEquation);
     }
     if(beaconsDetected[1] && beaconsDetected[2]){
-        double a = (double)(beaconsPos[2].first - beaconsPos[1].first)/(beaconsPos[1].second - beaconsPos[2].second);
-        double b = (pow(beaconsDistanceAndAngleRelative[1].first + BEACONS_RADIUS, 2) + pow(beaconsDistanceAndAngleRelative[2].first + BEACONS_RADIUS, 2))/(2*(beaconsPos[1].second - beaconsPos[2].second));
-        circlesIntersectionsEquations.emplace_back(a, b);
+        vector<pair<double,double>> intersectCircles =  Localization::intersectionBetweenCircles(beaconsPos[1], beaconsDistanceAndAngleRelative[1].first + (double)BEACONS_RADIUS, beaconsPos[2], beaconsDistanceAndAngleRelative[2].first + (double)BEACONS_RADIUS);
+        pair<double, double> lineEquation =  Localization::lineEquationFromPoints(intersectCircles[0], intersectCircles[1]);
+        circlesIntersectionsEquations.emplace_back(lineEquation);
     }
     if(beaconsDetected[2] && beaconsDetected[0]){
-        double a = (double)(beaconsPos[0].first - beaconsPos[2].first)/(beaconsPos[2].second - beaconsPos[0].second);
-        double b = (pow(beaconsDistanceAndAngleRelative[2].first + BEACONS_RADIUS, 2) + pow(beaconsDistanceAndAngleRelative[0].first + BEACONS_RADIUS, 2))/(2*(beaconsPos[2].second - beaconsPos[0].second));
-        circlesIntersectionsEquations.emplace_back(a, b);
+        vector<pair<double,double>> intersectCircles =  Localization::intersectionBetweenCircles(beaconsPos[2], beaconsDistanceAndAngleRelative[2].first + (double)BEACONS_RADIUS, beaconsPos[0], beaconsDistanceAndAngleRelative[0].first + (double)BEACONS_RADIUS);
+        pair<double, double> lineEquation =  Localization::lineEquationFromPoints(intersectCircles[0], intersectCircles[1]);
+        circlesIntersectionsEquations.emplace_back(lineEquation);
     }
     list<pair<double, double>> intersections;
     for (auto i = circlesIntersectionsEquations.begin(); i != prev(circlesIntersectionsEquations.end()); i++) {
         for (auto j = next(i); j != circlesIntersectionsEquations.end(); j++) {
-            pair<double, double> intersection;
-            double x_intersect = ((*i).second - (*j).second) / ((*j).first - (*i).first);
-            intersection = make_pair(x_intersect, (*i).second - (*i).first * x_intersect);
+            pair<double, double> intersection = Localization::intersectionBetweenLines(*i, *j);
             intersections.emplace_back(intersection);
         }
     }
     pair<int, int> robotPos = Localization::getAveragePosition(intersections);
-    //TODO : detect angle
     int angle = -1;
-    vector<int> result;
-    result.push_back(robotPos.first);
-    result.push_back(robotPos.second);
-    result.push_back(angle);
+    vector<int> result{robotPos.first, robotPos.second, angle};
     return result;
 }
 
 
 void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count) {
     list<pair<double, double>> points_inside;
-    vector<pair<double, double>> nearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
+    vector<pair<double, int>> nearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
     vector<bool> beaconsDetected(3, false);
     bool proximityAlert = false;
     bool positionIncorrect = false;
@@ -262,21 +307,20 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
             if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE) {
                 proximityAlert = true;
                 if (this->proximityLastRound) {
-                    int angle_radians = (int)(M_PI - (((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f) * 2.f * M_PI / 360.f);
-                    int angle_robot_base = angle_radians > 2*M_PI ? angle_radians - M_PI : angle_radians + M_PI;
-                    this->sendProximityAlert((int) ((double) nodes[pos].dist_mm_q2 / 4.0f),angle_robot_base);
+                    int angle_radians = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);
+                    this->sendProximityAlert((int) ((double) nodes[pos].dist_mm_q2 / 4.0f), angle_radians);
                 }
             }
             //Select points inside map and next to beacons
-            pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot, this->alpha_robot);
+            pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot,this->alpha_robot);
             if (Localization::isInsideMap(position)) {
                 points_inside.emplace_back(position);
             } else {
-                if(this->getBeaconsMode()){
+                if (this->getBeaconsMode()) {
                     int beaconNumber = this->getBeaconNumber(position);
-                    if((double)nodes[pos].dist_mm_q2 / 4.0f < nearestBeaconDetectedPointRelative[beaconNumber].first || nearestBeaconDetectedPointRelative[beaconNumber].first == -1){
-                        double angle_radians_non_trigo = (((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f) * 2.f * M_PI / 360.f;
-                        nearestBeaconDetectedPointRelative[beaconNumber] = make_pair((double)nodes[pos].dist_mm_q2 / 4.0f, angle_radians_non_trigo);
+                    if ((double) nodes[pos].dist_mm_q2 / 4.0f < nearestBeaconDetectedPointRelative[beaconNumber].first || nearestBeaconDetectedPointRelative[beaconNumber].first == -1) {
+                        int angle_radians = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);
+                        nearestBeaconDetectedPointRelative[beaconNumber] = make_pair((double) nodes[pos].dist_mm_q2 / 4.0f, angle_radians);
                         beaconsDetected[beaconNumber] = true;
                     }
                 }
@@ -292,23 +336,24 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     this->enemyPosition = averageDetection;
     this->enemyPositionGap = maxGap;
     //Determine approximative robot position from beacons
-    vector<int> robotPos = this->determineRobotPosition(nearestBeaconDetectedPointRelative, beaconsDetected);
-    pair<int, int> robotMeasuredPos{robotPos[0], robotPos[1]};
-    pair<int, int> robotOdometryPos{this->x_robot, this->y_robot};
-    int positionSwitch = Localization::distanceBetween(robotMeasuredPos, robotOdometryPos);
-    if(positionSwitch > POSITION_CORRECT_RANGE){
-        positionIncorrect = true;
-        if(this->positionIncorrectLastRound){
-            this->sendMessage("strat", "stop recalibrate", to_string(positionSwitch));
+    if(this->getBeaconsMode()){
+        vector<int> robotPos = this->determineRobotPosition(nearestBeaconDetectedPointRelative, beaconsDetected);
+        pair<int, int> robotMeasuredPos{robotPos[0], robotPos[1]};
+        pair<int, int> robotOdometryPos{this->x_robot, this->y_robot};
+        int positionSwitch = Localization::distanceBetween(robotMeasuredPos, robotOdometryPos);
+        if(positionSwitch > POSITION_CORRECT_RANGE){
+            positionIncorrect = true;
+            if(this->positionIncorrectLastRound){
+                this->sendMessage("strat", "stop recalibrate", to_string(positionSwitch));
+            }
         }
     }
-
     this->proximityLastRound = proximityAlert;
     this->positionIncorrectLastRound = positionIncorrect;
 }
 
 
-void Localization::processTriangulation(const vector<pair<double, double>>& overallNearestBeaconDetectedPointRelative) {
+void Localization::processTriangulation(const vector<pair<double, int>>& overallNearestBeaconDetectedPointRelative) {
     vector<bool> beaconsDetected(3, true);
     for(unsigned int i = 0; i < 3; i++){
         if(overallNearestBeaconDetectedPointRelative[i].first ==  -1){

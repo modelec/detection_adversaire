@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
             //start scanning
             drv->startScan(false, true);
             bool alreadyInTriangulationMode = false;
-            vector<pair<double, double>> overallNearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
+            vector<pair<double, int>> overallNearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
             unsigned int measurementCounter = 0;
             while(localizer.isStarted()) {
                 //Detect a first triangulation round
@@ -74,7 +74,7 @@ int main(int argc, char* argv[]) {
                     if(localizer.isTriangulating()){
                         //Triangulation mode
                         measurementCounter++;
-                        vector<pair<double, double>> nearestBeaconDetectedPointRelative = localizer.extractBeaconsMeasuredPoints(nodes, count);
+                        vector<pair<double, int>> nearestBeaconDetectedPointRelative = localizer.extractBeaconsMeasuredPoints(nodes, count);
                         for(unsigned int i = 0; i<3; i++){
                             if((nearestBeaconDetectedPointRelative[i].first < overallNearestBeaconDetectedPointRelative[i].first && nearestBeaconDetectedPointRelative[i].first != -1) || overallNearestBeaconDetectedPointRelative[i].first == -1){
                                 overallNearestBeaconDetectedPointRelative[i] = nearestBeaconDetectedPointRelative[i];
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
                     }
                 }
                 //Detect a last triangulation round
-                if(measurementCounter == TRIANGULATION_ROUNDS){
+                if(localizer.isTriangulating() && measurementCounter == TRIANGULATION_ROUNDS){
                     localizer.processTriangulation(overallNearestBeaconDetectedPointRelative);
                     alreadyInTriangulationMode = false;
                 }
