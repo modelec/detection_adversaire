@@ -14,15 +14,19 @@
 #define YELLOW_TEAM_BEACONS_POS {make_pair(1,2), make_pair(3,4), make_pair(5,6)}
 #define BLUE_TEAM_BEACONS_POS {make_pair(-94,72), make_pair(-94,1928), make_pair(1594,1000)}
 
+#define LIDAR_LOG_DEBUG_MODE
+
 #include <iostream>
 #include <vector>
 #include <list>
 #include <cmath>
-#include <chrono>
-#include <ctime>
 #include <rplidar.h>
 #include <TCPSocket/TCPClient.hpp>
 #include <TCPSocket/TCPUtils.hpp>
+
+#ifdef LIDAR_LOG_DEBUG_MODE
+#include <chrono>
+#endif
 
 using namespace std;
 using namespace TCPSocket;
