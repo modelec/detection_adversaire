@@ -66,6 +66,7 @@ public:
     static pair<double, double> lineEquationFromPoints(pair<double, double> p1, pair<double, double> p2);
     static vector<pair<double,double>> intersectionBetweenCircles(pair<double,double> c1, double r1, pair<double,double> c2, double r2);
     static pair<double,double> intersectionBetweenLines(pair<double,double> l1, pair<double,double> l2);
+    static int determineRobotOrientation(pair<int, int> robotPos, pair<int, int> beaconPos, int beaconOrientation);
     list<pair<double, double>> getMostProbableAgglomerate(vector<list<pair<double, double>>> &agglomerated_points);
     vector<int> determineRobotPosition(vector<pair<double, int>> beaconsDistanceAndAngleRelative, vector<bool> beaconsDetected);
     vector<pair<double, int>> extractBeaconsMeasuredPoints(sl_lidar_response_measurement_node_hq_t nodes[NODES_LEN], size_t count);

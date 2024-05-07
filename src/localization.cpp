@@ -214,10 +214,28 @@ vector<pair<double,double>> Localization::intersectionBetweenCircles(pair<double
 
 
 pair<double,double> Localization::intersectionBetweenLines(pair<double,double> l1, pair<double,double> l2){
-    pair<double, double> intersection;
     double x_intersect = (l2.second - l1.second) / (l1.first - l2.first);
     double y_intersect = l1.first * x_intersect + l1.second;
     return make_pair(x_intersect, y_intersect);
+}
+
+
+int Localization::determineRobotOrientation(pair<int,int> robotPos, pair<int,int> beaconPos, int beaconOrientation){
+    int angle = -1;
+    if(beaconPos.first <= robotPos.first && beaconPos.second <= robotPos.second){
+        angle = (int)(100*(double)atan(robotPos.first - beaconPos.first));
+    } else if(beaconPos.first <= robotPos.first && beaconPos.second >= robotPos.second){
+        angle = (int)(100*(M_PI/2 + (double)atan(beaconPos.second - robotPos.second)));
+    } else if(beaconPos.first >= robotPos.first && beaconPos.second >= robotPos.second){
+        angle = (int)(100*(M_PI+(double)atan(beaconPos.first - robotPos.first)));
+    } else if(beaconPos.first >= robotPos.first && beaconPos.second <= robotPos.second){
+        angle = (int)(100*(3*M_PI/2+(double)atan(robotPos.second - beaconPos.second)));
+    }
+    int alpha = angle - beaconOrientation;
+    if(alpha < 0){
+        alpha = (int)(alpha + 200*M_PI);
+    }
+    return alpha;
 }
 
 
@@ -262,8 +280,6 @@ vector<pair<double, int>> Localization::extractBeaconsMeasuredPoints(sl_lidar_re
 
 vector<int> Localization::determineRobotPosition(vector<pair<double, int>> beaconsDistanceAndAngleRelative, vector<bool> beaconsDetected) {
     pair<int, int>* beaconsPos = this->beaconsPositions;
-    for(unsigned int i=0; i<3; i++){
-    }
     list<pair<double, double>> circlesIntersectionsEquations;
     if(beaconsDetected[0] && beaconsDetected[1]){
         vector<pair<double,double>> intersectCircles =  Localization::intersectionBetweenCircles(beaconsPos[0], beaconsDistanceAndAngleRelative[0].first + (double)BEACONS_RADIUS, beaconsPos[1], beaconsDistanceAndAngleRelative[1].first + (double)BEACONS_RADIUS);
@@ -288,7 +304,17 @@ vector<int> Localization::determineRobotPosition(vector<pair<double, int>> beaco
         }
     }
     pair<int, int> robotPos = Localization::getAveragePosition(intersections);
-    int angle = -1;
+    int n = 0;
+    int angle = 0;
+    for(unsigned int i=0; i<3; i++){
+        if(beaconsDetected[i]){
+            n++;
+            angle += Localization::determineRobotOrientation(robotPos, beaconsPos[i], beaconsDistanceAndAngleRelative[i].second);
+        }
+    }
+    if(n != 0){
+        angle = angle/n;
+    }
     vector<int> result{robotPos.first, robotPos.second, angle};
     return result;
 }
