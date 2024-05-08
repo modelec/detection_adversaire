@@ -319,10 +319,7 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
                 if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE) {
                     proximityAlert = true;
                     if (this->proximityLastRound) {
-                        if(proximityValues.first == -1 || proximityValues.first > (int) ((double) nodes[pos].dist_mm_q2 / 4.0f)){
-                            proximityValues.first = (int) ((double) nodes[pos].dist_mm_q2 / 4.0f);
-                            proximityValues.second = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);;
-                        }
+                        this->sendProximityAlert((int) ((double) nodes[pos].dist_mm_q2 / 4.0f), Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f));
                     }
                     #ifdef LIDAR_LOG_DEBUG_MODE
                     long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -341,9 +338,6 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
                 }
             }
         }
-    }
-    if(this->proximityLastRound && proximityAlert){
-        this->sendProximityAlert(proximityValues.first, proximityValues.second);
     }
     //Get agglomerates without solo points
     vector<list<pair<double, double>>> agglomerated_points = Localization::getAgglomerates(points_inside);
