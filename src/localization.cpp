@@ -222,7 +222,6 @@ vector<pair<double,double>> Localization::intersectionBetweenCircles(pair<double
 
 
 pair<double,double> Localization::intersectionBetweenLines(pair<double,double> l1, pair<double,double> l2){
-    pair<double, double> intersection;
     double x_intersect = (l2.second - l1.second) / (l1.first - l2.first);
     double y_intersect = l1.first * x_intersect + l1.second;
     return make_pair(x_intersect, y_intersect);
@@ -334,9 +333,6 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
                 }
             }
         }
-    }
-    if(this->proximityLastRound && proximityAlert){
-        this->sendProximityAlert(proximityValues.first, proximityValues.second);
     }
     //Get agglomerates without solo points
     vector<list<pair<double, double>>> agglomerated_points = Localization::getAgglomerates(points_inside);
