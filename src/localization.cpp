@@ -308,7 +308,6 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     vector<bool> beaconsDetected(3, false);
     bool proximityAlert = false;
     bool positionIncorrect = false;
-    pair<int,int> proximityValues = {-1, -1};
     for (int pos = 0; pos < count; ++pos) {
         //checking measurement quality
         if(nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
