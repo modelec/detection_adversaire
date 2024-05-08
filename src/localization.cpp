@@ -315,19 +315,13 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
             //Select points inside map and next to beacons
             pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot,this->alpha_robot);
             if (Localization::isInsideMap(position)) {
-                //Checking for direct proximity
+                ///Checking for direct proximity
                 if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE) {
                     proximityAlert = true;
                     if (this->proximityLastRound) {
-                        if(proximityValues.first == -1 || proximityValues.first > (int) ((double) nodes[pos].dist_mm_q2 / 4.0f)){
-                            proximityValues.first = (int) ((double) nodes[pos].dist_mm_q2 / 4.0f);
-                            proximityValues.second = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);;
-                        }
+                        int angle_radians = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);
+                        this->sendProximityAlert((int) ((double) nodes[pos].dist_mm_q2 / 4.0f), angle_radians);
                     }
-                    #ifdef LIDAR_LOG_DEBUG_MODE
-                    long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-                    cout << "### localization.cpp:processPoints:329:T" << epoch << " >> detected proximity point - distance=" << proximityValues.first << " angle=" << proximityValues.second << endl;
-                    #endif
                 }
                 points_inside.emplace_back(position);
             } else {
@@ -380,7 +374,7 @@ void Localization::processTriangulation(const vector<pair<double, int>>& overall
     }
     #ifdef LIDAR_LOG_DEBUG_MODE
     long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    cout << "### localization.cpp:processTriangulation:383:T" << epoch << " >> detected beacons >> " << beaconsDetected[0] << ";" << beaconsDetected[1] << ";" << beaconsDetected[2] << endl;
+    cout << "### localization.cpp:processTriangulation:373:T" << epoch << " >> detected beacons >> " << beaconsDetected[0] << ";" << beaconsDetected[1] << ";" << beaconsDetected[2] << endl;
     #endif
     vector<int> robotPos = this->determineRobotPosition(overallNearestBeaconDetectedPointRelative, beaconsDetected);
     this->sendMessage("strat", "set pos", to_string(robotPos[0]) + ',' + to_string(robotPos[1]) + ',' + to_string(robotPos[2]));
@@ -426,7 +420,7 @@ void Localization::handleMessage(const std::string &message) {
             vector<string> position = split(data, ",");
             #ifdef LIDAR_LOG_DEBUG_MODE
             long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            cout << "### localization.cpp:handleMessage:429:T" << epoch << " >> got position TCP message >> " << position[0] << ";" << position[1] << ";" << position[2] << endl;
+            cout << "### localization.cpp:handleMessage:419:T" << epoch << " >> got position TCP message >> " << position[0] << ";" << position[1] << ";" << position[2] << endl;
             #endif
             this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
         }
@@ -450,7 +444,7 @@ void Localization::handleMessage(const std::string &message) {
             this->triangulationMode = true;
             #ifdef LIDAR_LOG_DEBUG_MODE
             long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            cout << "### localization.cpp:handleMessage:453:T" << epoch << " >> got triangulation TCP message" << endl;
+            cout << "### localization.cpp:handleMessage:443:T" << epoch << " >> got triangulation TCP message" << endl;
             #endif
         }
     }
@@ -459,8 +453,4 @@ void Localization::handleMessage(const std::string &message) {
 
 void Localization::sendProximityAlert(int distance, int angle) {
     this->sendMessage("all", "stop proximity", to_string(distance) + "," + to_string(angle));
-    #ifdef LIDAR_LOG_DEBUG_MODE
-    long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    cout << "### localization.cpp:sendProximityAlert:464:T" << epoch << " >> sent proximity message - distance=" << distance << " angle=" << angle << endl;
-    #endif
 }
