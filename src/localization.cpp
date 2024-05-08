@@ -369,7 +369,7 @@ void Localization::processTriangulation(const vector<pair<double, int>>& overall
     }
     #ifdef LIDAR_LOG_DEBUG_MODE
     long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    cout << "### localization.cpp:processTriangulation:373:T" << epoch << " >> detected beacons >> " << beaconsDetected[0] << ";" << beaconsDetected[1] << ";" << beaconsDetected[2] << endl;
+    cout << "### localization.cpp:processTriangulation:372:T" << epoch << " >> detected beacons >> " << beaconsDetected[0] << ";" << beaconsDetected[1] << ";" << beaconsDetected[2] << endl;
     #endif
     vector<int> robotPos = this->determineRobotPosition(overallNearestBeaconDetectedPointRelative, beaconsDetected);
     this->sendMessage("strat", "set pos", to_string(robotPos[0]) + ',' + to_string(robotPos[1]) + ',' + to_string(robotPos[2]));
@@ -415,7 +415,7 @@ void Localization::handleMessage(const std::string &message) {
             vector<string> position = split(data, ",");
             #ifdef LIDAR_LOG_DEBUG_MODE
             long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            cout << "### localization.cpp:handleMessage:419:T" << epoch << " >> got position TCP message >> " << position[0] << ";" << position[1] << ";" << position[2] << endl;
+            cout << "### localization.cpp:handleMessage:418:T" << epoch << " >> got position TCP message >> " << position[0] << ";" << position[1] << ";" << position[2] << endl;
             #endif
             this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
         }
@@ -439,7 +439,7 @@ void Localization::handleMessage(const std::string &message) {
             this->triangulationMode = true;
             #ifdef LIDAR_LOG_DEBUG_MODE
             long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-            cout << "### localization.cpp:handleMessage:443:T" << epoch << " >> got triangulation TCP message" << endl;
+            cout << "### localization.cpp:handleMessage:442:T" << epoch << " >> got triangulation TCP message" << endl;
             #endif
         }
     }
