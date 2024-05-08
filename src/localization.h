@@ -2,10 +2,10 @@
 #define LIDAR_LOCALIZATION_H
 
 #define NODES_LEN 8192
-#define MAX_TABLE_X 1500
+#define MAX_TABLE_X 3000
 #define MAX_TABLE_Y 2000
 #define BEACON_DETECT_RANGE 100
-#define PROXIMITY_ALERT_RANGE 250
+#define PROXIMITY_ALERT_RANGE 400
 #define BORDER_DETECT_TRIGGER 50
 #define AGGLOMERATES_TRIGGER 250
 #define BEACONS_RADIUS 50
@@ -14,15 +14,19 @@
 #define YELLOW_TEAM_BEACONS_POS {make_pair(1,2), make_pair(3,4), make_pair(5,6)}
 #define BLUE_TEAM_BEACONS_POS {make_pair(-94,72), make_pair(-94,1928), make_pair(1594,1000)}
 
+#define LIDAR_LOG_DEBUG_MODE
+
 #include <iostream>
 #include <vector>
 #include <list>
 #include <cmath>
-#include <chrono>
-#include <ctime>
 #include <rplidar.h>
 #include <TCPSocket/TCPClient.hpp>
 #include <TCPSocket/TCPUtils.hpp>
+
+#ifdef LIDAR_LOG_DEBUG_MODE
+#include <chrono>
+#endif
 
 using namespace std;
 using namespace TCPSocket;

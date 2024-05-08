@@ -14,7 +14,7 @@ void stop_loop(int) {
 
 using namespace std;
 using namespace std::this_thread;
-using namespace std::chrono_literals;
+
 
 int main(int argc, char* argv[]) {
     //TCP socket connection
@@ -37,7 +37,6 @@ int main(int argc, char* argv[]) {
         op_result = drv->getHealth(healthinfo);
         if (SL_IS_OK(op_result)) {
             localizer.setLidarHealth(true);
-            localizer.sendMessage("strat", "ready", "1");
         }
         signal(SIGINT, stop_loop);
         while(true){
@@ -102,6 +101,8 @@ int main(int argc, char* argv[]) {
         drv->stop();
         drv->setMotorSpeed(0);
         drv->disconnect();
+    } else {
+        localizer.sendMessage("strat", "set health", "0");
     }
     delete *channel;
     delete drv;

@@ -11,6 +11,10 @@ bool Localization::getLidarHealth() const {
 
 
 void Localization::setRobotPosition(int x, int y, int alpha) {
+    #ifdef LIDAR_LOG_DEBUG_MODE
+    long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    cout << "### localization.cpp:setRobotPosition:16:T" << epoch << " >> updated robot position >> " << x << ";" << y << ";" << alpha << endl;
+    #endif
     this->x_robot = x;
     this->y_robot = y;
     this->alpha_robot = alpha;
@@ -18,6 +22,10 @@ void Localization::setRobotPosition(int x, int y, int alpha) {
 
 
 void Localization::setBeaconsPosition(pair<int, int> positions[3]){
+    #ifdef LIDAR_LOG_DEBUG_MODE
+    long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    cout << "### localization.cpp:setBeaconsPosition:27:T" << epoch << " >> updated beacons position >> " << positions[0].first << ";" << positions[0].second << " - " << positions[1].first << ";" << positions[1].second << " - " << positions[2].first << ";" << positions[2].second << endl;
+    #endif
     for(unsigned int i = 0; i < 3; i++){
         this->beaconsPositions[i] = positions[i];
     }
@@ -214,7 +222,6 @@ vector<pair<double,double>> Localization::intersectionBetweenCircles(pair<double
 
 
 pair<double,double> Localization::intersectionBetweenLines(pair<double,double> l1, pair<double,double> l2){
-    pair<double, double> intersection;
     double x_intersect = (l2.second - l1.second) / (l1.first - l2.first);
     double y_intersect = l1.first * x_intersect + l1.second;
     return make_pair(x_intersect, y_intersect);
@@ -303,17 +310,17 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     for (int pos = 0; pos < count; ++pos) {
         //checking measurement quality
         if(nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
-            //Checking for direct proximity
-            if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE) {
-                proximityAlert = true;
-                if (this->proximityLastRound) {
-                    int angle_radians = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);
-                    this->sendProximityAlert((int) ((double) nodes[pos].dist_mm_q2 / 4.0f), angle_radians);
-                }
-            }
             //Select points inside map and next to beacons
             pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot,this->alpha_robot);
             if (Localization::isInsideMap(position)) {
+                ///Checking for direct proximity
+                if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE) {
+                    proximityAlert = true;
+                    if (this->proximityLastRound) {
+                        int angle_radians = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);
+                        this->sendProximityAlert((int) ((double) nodes[pos].dist_mm_q2 / 4.0f), angle_radians);
+                    }
+                }
                 points_inside.emplace_back(position);
             } else {
                 if (this->getBeaconsMode()) {
@@ -360,6 +367,10 @@ void Localization::processTriangulation(const vector<pair<double, int>>& overall
             beaconsDetected[i] = false;
         }
     }
+    #ifdef LIDAR_LOG_DEBUG_MODE
+    long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    cout << "### localization.cpp:processTriangulation:372:T" << epoch << " >> detected beacons >> " << beaconsDetected[0] << ";" << beaconsDetected[1] << ";" << beaconsDetected[2] << endl;
+    #endif
     vector<int> robotPos = this->determineRobotPosition(overallNearestBeaconDetectedPointRelative, beaconsDetected);
     this->sendMessage("strat", "set pos", to_string(robotPos[0]) + ',' + to_string(robotPos[1]) + ',' + to_string(robotPos[2]));
     this->triangulationMode = false;
@@ -402,6 +413,10 @@ void Localization::handleMessage(const std::string &message) {
         if (contains(verb, "set pos")) {
             //Update robot position and orientation
             vector<string> position = split(data, ",");
+            #ifdef LIDAR_LOG_DEBUG_MODE
+            long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            cout << "### localization.cpp:handleMessage:418:T" << epoch << " >> got position TCP message >> " << position[0] << ";" << position[1] << ";" << position[2] << endl;
+            #endif
             this->setRobotPosition(stoi(position[0]), stoi(position[1]), stoi(position[2]));
         }
         if (contains(verb, "set beacon")) {
@@ -422,6 +437,10 @@ void Localization::handleMessage(const std::string &message) {
             //ONLY IF ROBOT IS STOPPED : measure robot position from multiple lidar runs.
             this->setBeaconsMode(true);
             this->triangulationMode = true;
+            #ifdef LIDAR_LOG_DEBUG_MODE
+            long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            cout << "### localization.cpp:handleMessage:442:T" << epoch << " >> got triangulation TCP message" << endl;
+            #endif
         }
     }
 }
