@@ -11,7 +11,7 @@
 #define BEACONS_RADIUS 50
 #define TRIANGULATION_ROUNDS 3
 #define POSITION_CORRECT_RANGE 25
-#define YELLOW_TEAM_BEACONS_POS {make_pair(1594,72), make_pair(1594,1928), make_pair(-94,1000)} //Attention : mode demi table
+#define YELLOW_TEAM_BEACONS_POS {make_pair(3094,72), make_pair(3094,1928), make_pair(1406,1000)} //Attention : mode demi table
 #define BLUE_TEAM_BEACONS_POS {make_pair(-94,72), make_pair(-94,1928), make_pair(1594,1000)} //Attention : mode demi table
 
 #define LIDAR_LOG_DEBUG_MODE
