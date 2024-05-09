@@ -305,6 +305,7 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     list<pair<double, double>> points_inside;
     vector<pair<double, int>> nearestBeaconDetectedPointRelative(3, make_pair(-1, -1));
     vector<bool> beaconsDetected(3, false);
+    pair<int,int> proximityValues = {-1, -1};
     bool proximityAlert = false;
     bool positionIncorrect = false;
     for (int pos = 0; pos < count; ++pos) {
@@ -313,13 +314,19 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
             //Select points inside map and next to beacons
             pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot,this->alpha_robot);
             if (Localization::isInsideMap(position)) {
-                ///Checking for direct proximity
+                //Checking for direct proximity
                 if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE) {
                     proximityAlert = true;
                     if (this->proximityLastRound) {
-                        int angle_radians = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);
-                        this->sendProximityAlert((int) ((double) nodes[pos].dist_mm_q2 / 4.0f), angle_radians);
+                        if(proximityValues.first == -1 || proximityValues.first > (int) ((double) nodes[pos].dist_mm_q2 / 4.0f)){
+                            proximityValues.first = (int) ((double) nodes[pos].dist_mm_q2 / 4.0f);
+                            proximityValues.second = Localization::rplidarToTrigoRadians(((double) nodes[pos].angle_z_q14 * 90.f) / 16384.f);;
+                        }
                     }
+                    #ifdef LIDAR_LOG_DEBUG_MODE
+                    long epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                    cout << "### localization.cpp:processPoints:329:T" << epoch << " >> detected proximity point - distance=" << proximityValues.first << " angle=" << proximityValues.second << endl;
+                    #endif
                 }
                 points_inside.emplace_back(position);
             } else {
@@ -333,6 +340,9 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
                 }
             }
         }
+    }
+    if(this->proximityLastRound && proximityAlert){
+        this->sendProximityAlert(proximityValues.first, proximityValues.second);
     }
     //Get agglomerates without solo points
     vector<list<pair<double, double>>> agglomerated_points = Localization::getAgglomerates(points_inside);
