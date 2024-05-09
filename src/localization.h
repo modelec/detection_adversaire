@@ -2,7 +2,7 @@
 #define LIDAR_LOCALIZATION_H
 
 #define NODES_LEN 8192
-#define MAX_TABLE_X 3000 //Attention : mode demi table
+#define MAX_TABLE_X 1500 //Attention : mode demi table
 #define MAX_TABLE_Y 2000
 #define BEACON_DETECT_RANGE 100
 #define PROXIMITY_ALERT_RANGE 400
