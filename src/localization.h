@@ -2,7 +2,7 @@
 #define LIDAR_LOCALIZATION_H
 
 #define NODES_LEN 8192
-#define MAX_TABLE_X 1500 //Attention : mode demi table
+#define MAX_TABLE_X 3000 //Attention : mode demi table
 #define MAX_TABLE_Y 2000
 #define BEACON_DETECT_RANGE 100
 #define PROXIMITY_ALERT_RANGE 400
@@ -11,7 +11,7 @@
 #define BEACONS_RADIUS 50
 #define TRIANGULATION_ROUNDS 3
 #define POSITION_CORRECT_RANGE 25
-#define YELLOW_TEAM_BEACONS_POS {make_pair(3094,72), make_pair(3094,1928), make_pair(1406,1000)} //Attention : mode demi table
+#define YELLOW_TEAM_BEACONS_POS {make_pair(3094,72), make_pair(3094,1928), make_pair(-94,1000)} //Attention : mode demi table
 #define BLUE_TEAM_BEACONS_POS {make_pair(-94,72), make_pair(-94,1928), make_pair(1594,1000)} //Attention : mode demi table
 
 #define LIDAR_LOG_DEBUG_MODE
