@@ -37,8 +37,18 @@ void Localization::setBeaconsMode(bool state){
 }
 
 
+void Localization::setTableMode(bool state){
+    this->tableMode = state;
+}
+
+
 bool Localization::getBeaconsMode() const{
     return this->beaconsMode;
+}
+
+
+bool Localization::getTableMode() const{
+    return this->tableMode;
 }
 
 
@@ -313,9 +323,9 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
         if(nodes[pos].quality >> SL_LIDAR_RESP_MEASUREMENT_QUALITY_SHIFT != 0){
             //Select points inside map and next to beacons
             pair<int, int> position = Localization::robotToCartesian(nodes[pos], this->x_robot, this->y_robot,this->alpha_robot);
-            if (Localization::isInsideMap(position)) {
+            if (Localization::isInsideMap(position) || !this->getTableMode()) {
                 //Checking for direct proximity
-                if((double)nodes[pos].dist_mm_q2/4.0f < PROXIMITY_ALERT_RANGE) {
+                if((double)nodes[pos].dist_mm_q2/4.0f < this->proximityAlertRange) {
                     proximityAlert = true;
                     if (this->proximityLastRound) {
                         if(proximityValues.first == -1 || proximityValues.first > (int) ((double) nodes[pos].dist_mm_q2 / 4.0f)){
@@ -344,24 +354,26 @@ void Localization::processPoints(sl_lidar_response_measurement_node_hq_t nodes[N
     if(this->proximityLastRound && proximityAlert){
         this->sendProximityAlert(proximityValues.first, proximityValues.second);
     }
-    //Get agglomerates without solo points
-    vector<list<pair<double, double>>> agglomerated_points = Localization::getAgglomerates(points_inside);
-    //Get most probable agglomerate average position
-    list<pair<double, double>> ennemyAgglomerate = Localization::getMostProbableAgglomerate(agglomerated_points);
-    pair<int,int> averageDetection = Localization::getAveragePosition(ennemyAgglomerate);
-    int maxGap = Localization::getMaxGap(ennemyAgglomerate, averageDetection);
-    this->enemyPosition = averageDetection;
-    this->enemyPositionGap = maxGap;
-    //Determine approximative robot position from beacons
-    if(this->getBeaconsMode()){
-        vector<int> robotPos = this->determineRobotPosition(nearestBeaconDetectedPointRelative, beaconsDetected);
-        pair<int, int> robotMeasuredPos{robotPos[0], robotPos[1]};
-        pair<int, int> robotOdometryPos{this->x_robot, this->y_robot};
-        int positionSwitch = Localization::distanceBetween(robotMeasuredPos, robotOdometryPos);
-        if(positionSwitch > POSITION_CORRECT_RANGE){
-            positionIncorrect = true;
-            if(this->positionIncorrectLastRound){
-                this->sendMessage("strat", "stop recalibrate", to_string(positionSwitch));
+    if(this->getTableMode()) {
+        //Get agglomerates without solo points
+        vector<list<pair<double, double>>> agglomerated_points = Localization::getAgglomerates(points_inside);
+        //Get most probable agglomerate average position
+        list<pair<double, double>> ennemyAgglomerate = Localization::getMostProbableAgglomerate(agglomerated_points);
+        pair<int, int> averageDetection = Localization::getAveragePosition(ennemyAgglomerate);
+        int maxGap = Localization::getMaxGap(ennemyAgglomerate, averageDetection);
+        this->enemyPosition = averageDetection;
+        this->enemyPositionGap = maxGap;
+        //Determine approximative robot position from beacons
+        if (this->getBeaconsMode()) {
+            vector<int> robotPos = this->determineRobotPosition(nearestBeaconDetectedPointRelative, beaconsDetected);
+            pair<int, int> robotMeasuredPos{robotPos[0], robotPos[1]};
+            pair<int, int> robotOdometryPos{this->x_robot, this->y_robot};
+            int positionSwitch = Localization::distanceBetween(robotMeasuredPos, robotOdometryPos);
+            if (positionSwitch > POSITION_CORRECT_RANGE) {
+                positionIncorrect = true;
+                if (this->positionIncorrectLastRound) {
+                    this->sendMessage("strat", "stop recalibrate", to_string(positionSwitch));
+                }
             }
         }
     }
@@ -433,6 +445,11 @@ void Localization::handleMessage(const std::string &message) {
             //Enable or disable beacons triangulation. This must be put to 0 if no beacons are on the table
             this->setBeaconsMode(stoi(data));
         }
+        if (contains(verb, "set table")) {
+            //Enable or disable table mode. Set this to 0 to use the robot in another environment than the match table
+            this->setTableMode(stoi(data));
+            this->setBeaconsMode(false);
+        }
         if (contains(verb, "set team")) {
             //Update beacons position
             if(stoi(data) == 0){
@@ -442,6 +459,10 @@ void Localization::handleMessage(const std::string &message) {
                 pair<int, int> positions[3] = YELLOW_TEAM_BEACONS_POS;
                 this->setBeaconsPosition(positions);
             }
+        }
+        if (contains(verb, "set range")) {
+            //Updates proximity alert range
+            this->proximityAlertRange = stoi(data);
         }
         if (contains(verb, "get pos")) {
             //ONLY IF ROBOT IS STOPPED : measure robot position from multiple lidar runs.

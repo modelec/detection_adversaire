@@ -5,7 +5,6 @@
 #define MAX_TABLE_X 3000 //Attention : mode demi table
 #define MAX_TABLE_Y 2000
 #define BEACON_DETECT_RANGE 100
-#define PROXIMITY_ALERT_RANGE 450
 #define BORDER_DETECT_TRIGGER 50
 #define AGGLOMERATES_TRIGGER 250
 #define BEACONS_RADIUS 50
@@ -39,9 +38,11 @@ private:
     pair<int, int> enemyPosition = make_pair(-1, -1);
     int enemyPositionGap = -1;
     pair<int, int> beaconsPositions[3];
+    int proximityAlertRange = 450;
     bool lidarHealth = false;
     bool started = false;
     bool beaconsMode = true;
+    bool tableMode = true;
     bool proximityLastRound = false;
     bool positionIncorrectLastRound = false;
     bool triangulationMode = false;
@@ -53,10 +54,12 @@ public:
     };
     void setLidarHealth(bool ok);
     void setRobotPosition(int x, int y, int alpha);
+    void setTableMode(bool state);
     void setBeaconsMode(bool state);
     void setBeaconsPosition(pair<int, int> positions[3]);
     [[nodiscard]] bool getLidarHealth() const;
     [[nodiscard]] bool getBeaconsMode() const;
+    [[nodiscard]] bool getTableMode() const;
     [[nodiscard]] vector<int> getAvoidance() const;
     [[nodiscard]] bool isStarted() const;
     [[nodiscard]] bool isTriangulating() const;
