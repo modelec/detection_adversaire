@@ -2,6 +2,8 @@
 #include <thread>
 #include "localization.h"
 
+#include <Modelec/CLParser.h>
+
 #ifndef get_size
 #define get_size(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
 #endif
@@ -17,11 +19,11 @@ using namespace std::this_thread;
 
 int main(int argc, char* argv[]) {
     //TCP socket connection
-    int port = 8080;
-    if (argc == 2)
-    {
-        port = std::stoi(argv[1]);
-    }
+
+    CLParser clParser(argc, argv);
+
+    int port = std::stoi(clParser.getOption("port", "8080"));
+
     Localization localizer(-1, -1, -1, "127.0.0.1", port);
     localizer.start();    
     localizer.sendMessage("strat", "ready", "1");

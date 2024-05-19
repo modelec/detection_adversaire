@@ -8,6 +8,8 @@ SET(CMAKE_CXX_FLAGS -pthread)
 
 find_package(Modelec COMPONENTS
         TCPClient
+        CLParser
+        Utils
         REQUIRED
 )
 
@@ -25,6 +27,6 @@ target_include_directories(rplidar INTERFACE
   ${RPLIDAR_SDK_PATH}/sdk/include/
   ${RPLIDAR_SDK_PATH}/sdk/src/)
 
-target_link_libraries(${PROJECT_NAME} Modelec::TCPClient)
+target_link_libraries(${PROJECT_NAME} Modelec::TCPClient Modelec::Utils Modelec::CLParser)
 
 target_link_libraries(${PROJECT_NAME} rplidar)
