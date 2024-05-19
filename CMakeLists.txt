@@ -6,8 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 SET(CMAKE_CXX_FLAGS -pthread)
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(TCPSocket REQUIRED TCPSocket)
+find_package(Modelec COMPONENTS
+        TCPClient
+        REQUIRED
+)
 
 include_directories(include)
 add_executable(${PROJECT_NAME} src/main.cpp src/localization.h src/localization.cpp)
@@ -23,6 +25,6 @@ target_include_directories(rplidar INTERFACE
   ${RPLIDAR_SDK_PATH}/sdk/include/
   ${RPLIDAR_SDK_PATH}/sdk/src/)
 
-target_link_libraries(${PROJECT_NAME} TCPSocket)
+target_link_libraries(${PROJECT_NAME} Modelec::TCPClient)
 
 target_link_libraries(${PROJECT_NAME} rplidar)

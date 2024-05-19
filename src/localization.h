@@ -20,15 +20,15 @@
 #include <list>
 #include <cmath>
 #include <rplidar.h>
-#include <TCPSocket/TCPClient.hpp>
-#include <TCPSocket/TCPUtils.hpp>
+#include <Modelec/TCPClient.h>
+#include <Modelec/Utils.h>
 
 #ifdef LIDAR_LOG_DEBUG_MODE
 #include <chrono>
 #endif
 
 using namespace std;
-using namespace TCPSocket;
+using namespace Modelec;
 
 class Localization : public TCPClient{
 private:
