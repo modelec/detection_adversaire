@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 
     CLParser clParser(argc, argv);
 
-    int port = std::stoi(clParser.getOption("port", "8080"));
+    int port = clParser.getOption<int>("port", 8080);
 
     Localization localizer(-1, -1, -1, "127.0.0.1", port);
     localizer.start();    
