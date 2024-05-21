@@ -24,7 +24,9 @@ int main(int argc, char* argv[]) {
 
     int port = clParser.getOption<int>("port", 8080);
 
-    Localization localizer(-1, -1, -1, "127.0.0.1", port);
+    auto host = clParser.getOption("host", "127.0.0.1");
+
+    Localization localizer(-1, -1, -1, host, port);
     localizer.start();    
     localizer.sendMessage("strat", "ready", "1");
     //LIDAR connection
