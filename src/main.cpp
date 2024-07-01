@@ -1,5 +1,6 @@
 #include <csignal>
 #include <thread>
+#include <atomic>
 #include "localization.h"
 
 #include <Modelec/CLParser.h>
@@ -8,7 +9,7 @@
 #define get_size(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
 #endif
 
-bool stop_signal_received = false;
+std::atomic<bool> stop_signal_received = false;
 
 void stop_loop(int) {
     stop_signal_received = true;
